@@ -1,25 +1,31 @@
 import 'package:flutter/material.dart';
 
+import 'ui/screens/home/home_screen.dart';
+import 'ui/screens/login/sign_in_screen.dart';
+import 'ui/screens/signup/sign_up_screen.dart';
+import 'ui/screens/splash/splash_screen.dart';
+import 'theme/app_theme.dart';
+
 void main() {
-  runApp(const ScmsApp());
+  runApp(const SmartCanteenApp());
 }
 
-class ScmsApp extends StatelessWidget {
-  const ScmsApp({super.key});
+class SmartCanteenApp extends StatelessWidget {
+  const SmartCanteenApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Smart Canteen Management System',
-      home: Scaffold(
-        appBar: AppBar(
-          title: const Text('SCMS'),
-        ),
-        body: const Center(
-          child: Text('Smart Canteen Management System'),
-        ),
-      ),
+      title: 'Smart Canteen',
+      theme: AppTheme.lightTheme,
+      initialRoute: SplashScreen.routeName,
+      routes: {
+        SplashScreen.routeName: (_) => const SplashScreen(),
+        SignInScreen.routeName: (_) => const SignInScreen(),
+        SignUpScreen.routeName: (_) => const SignUpScreen(),
+        HomeScreen.routeName: (_) => const HomeScreen(),
+      },
     );
   }
 }
