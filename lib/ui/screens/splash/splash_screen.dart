@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../theme/app_theme.dart';
-import '../../../widgets/smart_canteen_widgets.dart';
+import '../../widgets/smart_canteen_widgets.dart';
 import '../login/sign_in_screen.dart';
 
 class SplashScreen extends StatelessWidget {
@@ -65,7 +65,10 @@ class SplashScreen extends StatelessWidget {
                     child: SmartCanteenButton(
                       label: 'Get Started',
                       onPressed: () {
-                        Navigator.pushReplacementNamed(context, SignInScreen.routeName);
+                        Navigator.pushReplacementNamed(
+                          context,
+                          SignInScreen.routeName,
+                        );
                       },
                     ),
                   ),

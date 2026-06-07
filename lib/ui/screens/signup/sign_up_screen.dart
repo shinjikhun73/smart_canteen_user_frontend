@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../theme/app_theme.dart';
-import '../../../widgets/smart_canteen_widgets.dart';
+import '../../widgets/smart_canteen_widgets.dart';
 import '../home/home_screen.dart';
 import '../login/sign_in_screen.dart';
 
@@ -19,7 +19,9 @@ class SignUpScreen extends StatelessWidget {
             return SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight - 32),
+                constraints: BoxConstraints(
+                  minHeight: constraints.maxHeight - 32,
+                ),
                 child: IntrinsicHeight(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -34,13 +36,17 @@ class SignUpScreen extends StatelessWidget {
                       const SizedBox(height: 12),
                       const _AuthHero(
                         title: 'Create Account',
-                        subtitle: 'Create your account now and start\nyour meal at once',
+                        subtitle:
+                            'Create your account now and start\nyour meal at once',
                       ),
                       const SizedBox(height: 18),
                       SmartCanteenAuthSwitch(
                         isLoginSelected: false,
                         onLoginTap: () {
-                          Navigator.pushReplacementNamed(context, SignInScreen.routeName);
+                          Navigator.pushReplacementNamed(
+                            context,
+                            SignInScreen.routeName,
+                          );
                         },
                         onSignUpTap: () {},
                       ),
@@ -48,29 +54,47 @@ class SignUpScreen extends StatelessWidget {
                       const SmartCanteenTextField(
                         label: 'Email',
                         hintText: 'Enter your email',
-                        prefixIcon: Icon(Icons.mail_outline, color: AppTheme.green),
+                        prefixIcon: Icon(
+                          Icons.mail_outline,
+                          color: AppTheme.green,
+                        ),
                       ),
                       const SizedBox(height: 16),
                       const SmartCanteenTextField(
                         label: 'Password',
                         hintText: 'Enter your password',
                         obscureText: true,
-                        prefixIcon: Icon(Icons.lock_outline, color: AppTheme.green),
-                        suffixIcon: Icon(Icons.visibility_outlined, color: AppTheme.mutedText),
+                        prefixIcon: Icon(
+                          Icons.lock_outline,
+                          color: AppTheme.green,
+                        ),
+                        suffixIcon: Icon(
+                          Icons.visibility_outlined,
+                          color: AppTheme.mutedText,
+                        ),
                       ),
                       const SizedBox(height: 16),
                       const SmartCanteenTextField(
                         label: 'Confirm Password',
                         hintText: 'Enter your password again',
                         obscureText: true,
-                        prefixIcon: Icon(Icons.lock_outline, color: AppTheme.green),
-                        suffixIcon: Icon(Icons.visibility_outlined, color: AppTheme.mutedText),
+                        prefixIcon: Icon(
+                          Icons.lock_outline,
+                          color: AppTheme.green,
+                        ),
+                        suffixIcon: Icon(
+                          Icons.visibility_outlined,
+                          color: AppTheme.mutedText,
+                        ),
                       ),
                       const SizedBox(height: 18),
                       SmartCanteenButton(
                         label: 'Sign Up',
                         onPressed: () {
-                          Navigator.pushReplacementNamed(context, HomeScreen.routeName);
+                          Navigator.pushReplacementNamed(
+                            context,
+                            HomeScreen.routeName,
+                          );
                         },
                       ),
                       const SizedBox(height: 18),
@@ -80,12 +104,18 @@ class SignUpScreen extends StatelessWidget {
                         children: [
                           SmartCanteenSocialButton(
                             label: 'Google',
-                            icon: _socialIcon(Icons.g_mobiledata, color: const Color(0xFF4285F4)),
+                            icon: _socialIcon(
+                              Icons.g_mobiledata,
+                              color: const Color(0xFF4285F4),
+                            ),
                           ),
                           const SizedBox(width: 12),
                           SmartCanteenSocialButton(
                             label: 'Facebook',
-                            icon: _socialIcon(Icons.facebook, color: const Color(0xFF1877F2)),
+                            icon: _socialIcon(
+                              Icons.facebook,
+                              color: const Color(0xFF1877F2),
+                            ),
                           ),
                         ],
                       ),
@@ -127,10 +157,7 @@ class _AuthHero extends StatelessWidget {
           Positioned(
             right: -18,
             top: -18,
-            child: Opacity(
-              opacity: 0.18,
-              child: CanteenLogo(size: size),
-            ),
+            child: Opacity(opacity: 0.18, child: CanteenLogo(size: size)),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 28, 20, 18),

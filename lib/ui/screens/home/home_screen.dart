@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../theme/app_theme.dart';
-import '../../../widgets/smart_canteen_widgets.dart';
+import '../../widgets/smart_canteen_widgets.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -37,7 +37,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 IconButton(
                   onPressed: () {},
-                  icon: const Icon(Icons.shopping_cart_outlined, color: AppTheme.green),
+                  icon: const Icon(
+                    Icons.shopping_cart_outlined,
+                    color: AppTheme.green,
+                  ),
                 ),
               ],
             ),
@@ -52,9 +55,21 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 12),
             const Row(
               children: [
-                Expanded(child: _CouponCard(title: 'Breakfast', time: '7:00 am - 9:00 am', icon: Icons.wb_sunny_outlined)),
+                Expanded(
+                  child: _CouponCard(
+                    title: 'Breakfast',
+                    time: '7:00 am - 9:00 am',
+                    icon: Icons.wb_sunny_outlined,
+                  ),
+                ),
                 SizedBox(width: 10),
-                Expanded(child: _CouponCard(title: 'Lunch', time: '11:00 am - 1:00 pm', icon: Icons.lunch_dining_outlined)),
+                Expanded(
+                  child: _CouponCard(
+                    title: 'Lunch',
+                    time: '11:00 am - 1:00 pm',
+                    icon: Icons.lunch_dining_outlined,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 18),
@@ -63,7 +78,13 @@ class _HomeScreenState extends State<HomeScreen> {
             Row(
               children: [
                 const Expanded(child: _SectionHeader(title: 'Today\'s Menu')),
-                TextButton(onPressed: () {}, child: const Text('View More >>', style: TextStyle(color: AppTheme.green))),
+                TextButton(
+                  onPressed: () {},
+                  child: const Text(
+                    'View More >>',
+                    style: TextStyle(color: AppTheme.green),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 10),
@@ -71,13 +92,37 @@ class _HomeScreenState extends State<HomeScreen> {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  GestureDetector(onTap: () => setState(() => selectedFilter = 0), child: MenuChip(label: 'All', selected: selectedFilter == 0)),
+                  GestureDetector(
+                    onTap: () => setState(() => selectedFilter = 0),
+                    child: MenuChip(
+                      label: 'All',
+                      selected: selectedFilter == 0,
+                    ),
+                  ),
                   const SizedBox(width: 10),
-                  GestureDetector(onTap: () => setState(() => selectedFilter = 1), child: MenuChip(label: 'Breakfast', selected: selectedFilter == 1)),
+                  GestureDetector(
+                    onTap: () => setState(() => selectedFilter = 1),
+                    child: MenuChip(
+                      label: 'Breakfast',
+                      selected: selectedFilter == 1,
+                    ),
+                  ),
                   const SizedBox(width: 10),
-                  GestureDetector(onTap: () => setState(() => selectedFilter = 2), child: MenuChip(label: 'Lunch', selected: selectedFilter == 2)),
+                  GestureDetector(
+                    onTap: () => setState(() => selectedFilter = 2),
+                    child: MenuChip(
+                      label: 'Lunch',
+                      selected: selectedFilter == 2,
+                    ),
+                  ),
                   const SizedBox(width: 10),
-                  GestureDetector(onTap: () => setState(() => selectedFilter = 3), child: MenuChip(label: 'Drinks', selected: selectedFilter == 3)),
+                  GestureDetector(
+                    onTap: () => setState(() => selectedFilter = 3),
+                    child: MenuChip(
+                      label: 'Drinks',
+                      selected: selectedFilter == 3,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -104,28 +149,9 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          child: BottomNavigationBar(
-            currentIndex: selectedTab,
-            onTap: (index) => setState(() => selectedTab = index),
-            type: BottomNavigationBarType.fixed,
-            backgroundColor: AppTheme.green,
-            elevation: 0,
-            selectedItemColor: Colors.white,
-            unselectedItemColor: Colors.white.withValues(alpha: 0.7),
-            showSelectedLabels: false,
-            showUnselectedLabels: false,
-            items: const [
-              BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),
-              BottomNavigationBarItem(icon: Icon(Icons.restaurant_menu), label: 'Search'),
-              BottomNavigationBarItem(icon: Icon(Icons.qr_code_2), label: 'QR Scan'),
-              BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
-            ],
-          ),
-        ),
+      bottomNavigationBar: SmartCanteenNavigationBarButton(
+        currentIndex: selectedTab,
+        onTap: (index) => setState(() => selectedTab = index),
       ),
     );
   }
@@ -157,23 +183,37 @@ class _BalanceCard extends StatelessWidget {
             children: [
               Container(
                 width: 120,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: AppTheme.green,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Text(
                   'Balance',
-                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w500),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
               const Text(
                 '៛65,000',
-                style: TextStyle(color: AppTheme.green, fontSize: 26, fontWeight: FontWeight.w700),
+                style: TextStyle(
+                  color: AppTheme.green,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               const SizedBox(height: 2),
-              const Text('~\$16.25', style: TextStyle(color: AppTheme.green, fontSize: 12)),
+              const Text(
+                '~\$16.25',
+                style: TextStyle(color: AppTheme.green, fontSize: 12),
+              ),
               const SizedBox(height: 10),
               Row(
                 children: [
@@ -183,7 +223,11 @@ class _BalanceCard extends StatelessWidget {
                       onPressed: onTopUp,
                       height: 40,
                       radius: 10,
-                      leading: const Icon(Icons.add, size: 16, color: Colors.white),
+                      leading: const Icon(
+                        Icons.add,
+                        size: 16,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -194,7 +238,11 @@ class _BalanceCard extends StatelessWidget {
                       color: AppTheme.green,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.qr_code_2, color: Colors.black, size: 26),
+                    child: const Icon(
+                      Icons.qr_code_2,
+                      color: Colors.white,
+                      size: 26,
+                    ),
                   ),
                 ],
               ),
@@ -225,7 +273,11 @@ class _SectionHeader extends StatelessWidget {
 }
 
 class _CouponCard extends StatelessWidget {
-  const _CouponCard({required this.title, required this.time, required this.icon});
+  const _CouponCard({
+    required this.title,
+    required this.time,
+    required this.icon,
+  });
 
   final String title;
   final String time;
@@ -252,9 +304,22 @@ class _CouponCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(color: AppTheme.green, fontWeight: FontWeight.w700, fontSize: 13)),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: AppTheme.green,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(time, style: const TextStyle(color: AppTheme.mutedText, fontSize: 10)),
+                Text(
+                  time,
+                  style: const TextStyle(
+                    color: AppTheme.mutedText,
+                    fontSize: 10,
+                  ),
+                ),
               ],
             ),
           ),
@@ -292,12 +357,20 @@ class _PromoBanner extends StatelessWidget {
               children: [
                 const Text(
                   'Fresh Daily Campus Food',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 const Text(
                   'Exclusive 20% Discount for\nCADT Scholars this week',
-                  style: TextStyle(color: Colors.white, fontSize: 11, height: 1.35),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    height: 1.35,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 SizedBox(
@@ -319,6 +392,7 @@ class _PromoBanner extends StatelessWidget {
             flex: 2,
             child: Container(
               height: 110,
+              width: 110,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
                 gradient: const LinearGradient(
@@ -327,7 +401,11 @@ class _PromoBanner extends StatelessWidget {
                   end: Alignment.bottomRight,
                 ),
               ),
-              child: const Icon(Icons.ramen_dining, color: AppTheme.green, size: 58),
+              child: const Icon(
+                Icons.ramen_dining,
+                color: AppTheme.green,
+                size: 58,
+              ),
             ),
           ),
         ],
@@ -360,7 +438,11 @@ class _FoodCard extends StatelessWidget {
                 ),
               ),
               child: const Center(
-                child: Icon(Icons.ramen_dining, color: AppTheme.green, size: 64),
+                child: Icon(
+                  Icons.ramen_dining,
+                  color: AppTheme.green,
+                  size: 64,
+                ),
               ),
             ),
           ),
@@ -369,7 +451,11 @@ class _FoodCard extends StatelessWidget {
             'Khmer Noodle',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: AppTheme.green, fontSize: 12, fontWeight: FontWeight.w500),
+            style: TextStyle(
+              color: AppTheme.green,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
           ),
           const SizedBox(height: 2),
           const Text(
@@ -384,7 +470,11 @@ class _FoodCard extends StatelessWidget {
               onPressed: () {},
               height: 30,
               radius: 8,
-              leading: const Icon(Icons.add_shopping_cart, size: 14, color: Colors.white),
+              leading: const Icon(
+                Icons.add_shopping_cart,
+                size: 14,
+                color: Colors.white,
+              ),
             ),
           ),
         ],

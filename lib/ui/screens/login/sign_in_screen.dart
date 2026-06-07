@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../theme/app_theme.dart';
-import '../../../widgets/smart_canteen_widgets.dart';
+import '../../widgets/smart_canteen_widgets.dart';
 import '../home/home_screen.dart';
 import '../signup/sign_up_screen.dart';
 
@@ -26,7 +26,9 @@ class _SignInScreenState extends State<SignInScreen> {
             return SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight - 32),
+                constraints: BoxConstraints(
+                  minHeight: constraints.maxHeight - 32,
+                ),
                 child: IntrinsicHeight(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -41,29 +43,42 @@ class _SignInScreenState extends State<SignInScreen> {
                       const SizedBox(height: 12),
                       const _AuthHero(
                         title: 'Welcome Back',
-                        subtitle: 'fresh foods are waiting\nto be in your mouth',
+                        subtitle:
+                            'fresh foods are waiting\nto be in your mouth',
                       ),
                       const SizedBox(height: 18),
                       SmartCanteenAuthSwitch(
                         isLoginSelected: true,
                         onLoginTap: () {},
                         onSignUpTap: () {
-                          Navigator.pushReplacementNamed(context, SignUpScreen.routeName);
+                          Navigator.pushReplacementNamed(
+                            context,
+                            SignUpScreen.routeName,
+                          );
                         },
                       ),
                       const SizedBox(height: 20),
                       const SmartCanteenTextField(
                         label: 'Email',
                         hintText: 'Enter your email',
-                        prefixIcon: Icon(Icons.mail_outline, color: AppTheme.green),
+                        prefixIcon: Icon(
+                          Icons.mail_outline,
+                          color: AppTheme.green,
+                        ),
                       ),
                       const SizedBox(height: 16),
                       SmartCanteenTextField(
                         label: 'Password',
                         hintText: 'Enter your password',
                         obscureText: true,
-                        prefixIcon: const Icon(Icons.lock_outline, color: AppTheme.green),
-                        suffixIcon: const Icon(Icons.visibility_outlined, color: AppTheme.mutedText),
+                        prefixIcon: const Icon(
+                          Icons.lock_outline,
+                          color: AppTheme.green,
+                        ),
+                        suffixIcon: const Icon(
+                          Icons.visibility_outlined,
+                          color: AppTheme.mutedText,
+                        ),
                       ),
                       const SizedBox(height: 10),
                       Row(
@@ -82,7 +97,10 @@ class _SignInScreenState extends State<SignInScreen> {
                           ),
                           const Text(
                             'Remember me',
-                            style: TextStyle(color: AppTheme.mutedText, fontSize: 13),
+                            style: TextStyle(
+                              color: AppTheme.mutedText,
+                              fontSize: 13,
+                            ),
                           ),
                           const Spacer(),
                           TextButton(
@@ -101,7 +119,10 @@ class _SignInScreenState extends State<SignInScreen> {
                       SmartCanteenButton(
                         label: 'Log In',
                         onPressed: () {
-                          Navigator.pushReplacementNamed(context, HomeScreen.routeName);
+                          Navigator.pushReplacementNamed(
+                            context,
+                            HomeScreen.routeName,
+                          );
                         },
                       ),
                       const SizedBox(height: 18),
@@ -111,12 +132,18 @@ class _SignInScreenState extends State<SignInScreen> {
                         children: [
                           SmartCanteenSocialButton(
                             label: 'Google',
-                            icon: _socialIcon(Icons.g_mobiledata, color: const Color(0xFF4285F4)),
+                            icon: _socialIcon(
+                              Icons.g_mobiledata,
+                              color: const Color(0xFF4285F4),
+                            ),
                           ),
                           const SizedBox(width: 12),
                           SmartCanteenSocialButton(
                             label: 'Facebook',
-                            icon: _socialIcon(Icons.facebook, color: const Color(0xFF1877F2)),
+                            icon: _socialIcon(
+                              Icons.facebook,
+                              color: const Color(0xFF1877F2),
+                            ),
                           ),
                         ],
                       ),
@@ -158,10 +185,7 @@ class _AuthHero extends StatelessWidget {
           Positioned(
             right: -18,
             top: -18,
-            child: Opacity(
-              opacity: 0.18,
-              child: CanteenLogo(size: size),
-            ),
+            child: Opacity(opacity: 0.18, child: CanteenLogo(size: size)),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 28, 20, 18),
