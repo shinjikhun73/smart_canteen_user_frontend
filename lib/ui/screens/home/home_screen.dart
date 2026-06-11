@@ -151,7 +151,10 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       bottomNavigationBar: SmartCanteenNavigationBarButton(
         currentIndex: selectedTab,
-        onTap: (index) => setState(() => selectedTab = index),
+        onTap: (index) {
+          setState(() => selectedTab = index);
+          if (index == 1) Navigator.pushReplacementNamed(context, '/menu');
+        },
       ),
     );
   }

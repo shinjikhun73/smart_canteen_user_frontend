@@ -25,7 +25,7 @@ class SmartCanteenNavigationBarButton extends StatelessWidget {
           backgroundColor: AppTheme.green,
           elevation: 0,
           selectedItemColor: Colors.white,
-          unselectedItemColor: Colors.white.withValues(alpha: 0.7),
+          unselectedItemColor: Colors.white.withOpacity(0.7),
           showSelectedLabels: false,
           showUnselectedLabels: false,
           items: const [
