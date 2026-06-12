@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+
+import '../../../models/cart_model.dart';
+import '../../../models/food_item.dart';
 import '../../../theme/app_theme.dart';
 import '../../widgets/smart_canteen_widgets.dart';
 
@@ -12,11 +15,27 @@ class MenuScreen extends StatefulWidget {
 }
 
 class _MenuScreenState extends State<MenuScreen> {
-  int selectedFilter = 0;
-  final List<String> filters = ['All', 'Breakfast', 'Lunch', 'Drinks'];
+  int _selectedFilter = 0;
+  String _search = '';
+
+  static const _filters = ['All', 'Breakfast', 'Lunch', 'Drinks'];
+  static const _cats = ['', 'breakfast', 'lunch', 'drinks'];
+
+  List<FoodItem> get _visibleItems {
+    final cat = _cats[_selectedFilter];
+    return kMenuItems.where((f) {
+      final matchCat = cat.isEmpty || f.category == cat;
+      final matchSearch = _search.isEmpty ||
+          f.name.toLowerCase().contains(_search.toLowerCase());
+      return matchCat && matchSearch;
+    }).toList();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final cart = CartProvider.of(context);
+    final items = _visibleItems;
+
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -28,9 +47,37 @@ class _MenuScreenState extends State<MenuScreen> {
           style: TextStyle(fontWeight: FontWeight.w700),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.shopping_cart_outlined),
-            onPressed: () => Navigator.pushNamed(context, '/order-summary'),
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.shopping_cart_outlined),
+                onPressed: () =>
+                    Navigator.pushNamed(context, '/order-summary'),
+              ),
+              if (cart.totalItems > 0)
+                Positioned(
+                  right: 6,
+                  top: 6,
+                  child: Container(
+                    width: 18,
+                    height: 18,
+                    decoration: const BoxDecoration(
+                      color: Colors.redAccent,
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      '${cart.totalItems}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(width: 8),
         ],
@@ -40,51 +87,79 @@ class _MenuScreenState extends State<MenuScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: TextField(
-              decoration: InputDecoration(
+              onChanged: (v) => setState(() => _search = v),
+              decoration: const InputDecoration(
                 hintText: 'Find your favorite food',
-                prefixIcon: const Icon(Icons.search, color: AppTheme.mutedText),
-                contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                prefixIcon: Icon(Icons.search, color: AppTheme.mutedText),
+                contentPadding: EdgeInsets.symmetric(vertical: 0),
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
-              children: List.generate(filters.length, (index) {
+              children: List.generate(_filters.length, (i) {
                 return Padding(
                   padding: const EdgeInsets.only(right: 10),
                   child: GestureDetector(
-                    onTap: () => setState(() => selectedFilter = index),
+                    onTap: () => setState(() => _selectedFilter = i),
                     child: MenuChip(
-                      label: filters[index],
-                      selected: selectedFilter == index,
+                      label: _filters[i],
+                      selected: _selectedFilter == i,
                     ),
                   ),
                 );
               }),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: 5,
-              itemBuilder: (context, index) {
-                return const FoodItemCard();
-              },
-            ),
+            child: items.isEmpty
+                ? const Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.search_off, size: 48, color: AppTheme.border),
+                        SizedBox(height: 12),
+                        Text(
+                          'No items found',
+                          style: TextStyle(color: AppTheme.mutedText),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: items.length,
+                    itemBuilder: (context, index) {
+                      return FoodItemCard(
+                        item: items[index],
+                        onAdd: () => cart.add(items[index]),
+                      );
+                    },
+                  ),
           ),
-          const BottomSummaryBar(),
+          if (cart.totalItems > 0)
+            _BottomSummaryBar(cart: cart),
         ],
       ),
       bottomNavigationBar: SmartCanteenNavigationBarButton(
         currentIndex: 1,
-        onTap: (index) {
-          if (index == 0) Navigator.pushReplacementNamed(context, '/home');
-          if (index == 1) return; // Already here
-          // Add other navigations here when screens are ready
+        onTap: (i) {
+          switch (i) {
+            case 0:
+              Navigator.pushReplacementNamed(context, '/home');
+            case 1:
+              break;
+            case 2:
+              Navigator.pushReplacementNamed(context, '/qr');
+            case 3:
+              Navigator.pushReplacementNamed(context, '/history');
+            case 4:
+              Navigator.pushReplacementNamed(context, '/profile');
+          }
         },
       ),
     );
@@ -92,7 +167,10 @@ class _MenuScreenState extends State<MenuScreen> {
 }
 
 class FoodItemCard extends StatelessWidget {
-  const FoodItemCard({super.key});
+  const FoodItemCard({super.key, required this.item, required this.onAdd});
+
+  final FoodItem item;
+  final VoidCallback onAdd;
 
   @override
   Widget build(BuildContext context) {
@@ -103,14 +181,13 @@ class FoodItemCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(14),
-                color: const Color(0xFFF7E4C1),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: SizedBox(
+                width: 100,
+                height: 100,
+                child: _FoodImage(item: item),
               ),
-              child: const Icon(Icons.restaurant_menu, color: AppTheme.green, size: 40),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -120,57 +197,72 @@ class FoodItemCard extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'Fried Pork with Rice',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.text,
+                      Expanded(
+                        child: Text(
+                          item.name,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.text,
+                          ),
                         ),
                       ),
                       Row(
                         children: [
                           const Icon(Icons.star, color: Colors.amber, size: 16),
                           const SizedBox(width: 2),
-                          const Text(
-                            '4.8',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                          Text(
+                            item.rating.toString(),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ],
                       ),
                     ],
                   ),
                   const SizedBox(height: 4),
-                  const Text(
-                    'Thinly sliced pork cuts marinated in palm sugar, garlic, fish sauce...',
+                  Text(
+                    item.description,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 11, color: AppTheme.mutedText),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppTheme.mutedText,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 6,
-                    children: ['Sweet', 'Grilled', 'Spicy'].map((tag) {
+                    children: item.tags.map((tag) {
                       return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
-                          color: AppTheme.accentBlue.withOpacity(0.3),
+                          color: AppTheme.accentBlue.withValues(alpha: 0.3),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           tag,
-                          style: const TextStyle(fontSize: 9, color: Colors.blueAccent, fontWeight: FontWeight.w600),
+                          style: const TextStyle(
+                            fontSize: 9,
+                            color: Colors.blueAccent,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ).animateFade();
+                      );
                     }).toList(),
                   ),
                   const SizedBox(height: 10),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        '\$1.75',
-                        style: TextStyle(
+                      Text(
+                        '\$${item.price.toStringAsFixed(2)}',
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
                           color: AppTheme.green,
@@ -181,7 +273,7 @@ class FoodItemCard extends StatelessWidget {
                         height: 30,
                         child: SmartCanteenButton(
                           label: 'Add',
-                          onPressed: () {},
+                          onPressed: onAdd,
                           height: 30,
                           radius: 8,
                         ),
@@ -198,8 +290,46 @@ class FoodItemCard extends StatelessWidget {
   }
 }
 
-class BottomSummaryBar extends StatelessWidget {
-  const BottomSummaryBar({super.key});
+class _FoodImage extends StatelessWidget {
+  const _FoodImage({required this.item});
+  final FoodItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    if (item.imagePath != null) {
+      return Image.asset(
+        item.imagePath!,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => _placeholder(),
+      );
+    }
+    return _placeholder();
+  }
+
+  Widget _placeholder() {
+    final idx = item.colorSeed % kFoodGradients.length;
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: kFoodGradients[idx],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Center(
+        child: Icon(
+          kFoodIcons[idx % kFoodIcons.length],
+          color: AppTheme.green,
+          size: 40,
+        ),
+      ),
+    );
+  }
+}
+
+class _BottomSummaryBar extends StatelessWidget {
+  const _BottomSummaryBar({required this.cart});
+  final CartModel cart;
 
   @override
   Widget build(BuildContext context) {
@@ -209,7 +339,7 @@ class BottomSummaryBar extends StatelessWidget {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 10,
             offset: const Offset(0, -5),
           ),
@@ -217,17 +347,17 @@ class BottomSummaryBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Column(
+          Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '2 items',
-                style: TextStyle(fontSize: 12, color: AppTheme.mutedText),
+                '${cart.totalItems} item${cart.totalItems == 1 ? '' : 's'}',
+                style: const TextStyle(fontSize: 12, color: AppTheme.mutedText),
               ),
-              const Text(
-                '\$3.75',
-                style: TextStyle(
+              Text(
+                '\$${cart.subtotal.toStringAsFixed(2)}',
+                style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
                   color: AppTheme.green,
@@ -235,11 +365,12 @@ class BottomSummaryBar extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(width: 20),
+          const SizedBox(width: 16),
           Expanded(
             child: SmartCanteenButton(
               label: 'View Cart',
-              onPressed: () => Navigator.pushNamed(context, '/order-summary'),
+              onPressed: () =>
+                  Navigator.pushNamed(context, '/order-summary'),
               height: 48,
               radius: 12,
               fillColor: AppTheme.accentBlue,
@@ -250,7 +381,8 @@ class BottomSummaryBar extends StatelessWidget {
           Expanded(
             child: SmartCanteenButton(
               label: 'Checkout',
-              onPressed: () {},
+              onPressed: () =>
+                  Navigator.pushNamed(context, '/order-summary'),
               height: 48,
               radius: 12,
             ),
@@ -259,8 +391,4 @@ class BottomSummaryBar extends StatelessWidget {
       ),
     );
   }
-}
-
-extension AnimationExt on Widget {
-  Widget animateFade() => this; // Placeholder for future animation
 }

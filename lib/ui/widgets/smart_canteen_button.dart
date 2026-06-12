@@ -33,6 +33,9 @@ class SmartCanteenButton extends StatelessWidget {
           backgroundColor: fillColor,
           foregroundColor: textColor,
           elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          minimumSize: Size.zero,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radius),
           ),

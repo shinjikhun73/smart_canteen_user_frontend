@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+
+import '../../../models/cart_model.dart';
+import '../../../models/food_item.dart';
 import '../../../theme/app_theme.dart';
 import '../../widgets/smart_canteen_widgets.dart';
 
@@ -7,8 +10,64 @@ class OrderSummaryScreen extends StatelessWidget {
 
   static const routeName = '/order-summary';
 
+  void _showPaymentSuccess(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        contentPadding: const EdgeInsets.all(28),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: AppTheme.green.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.check_circle_outline,
+                color: AppTheme.green,
+                size: 40,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Payment Successful!',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.text,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Your order has been placed.\nPlease collect at the counter.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppTheme.mutedText, fontSize: 13, height: 1.5),
+            ),
+            const SizedBox(height: 24),
+            SmartCanteenButton(
+              label: 'Back to Home',
+              onPressed: () => Navigator.pushNamedAndRemoveUntil(
+                context,
+                '/home',
+                (_) => false,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final cart = CartProvider.of(context);
+    final entries = cart.entries;
+
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -19,65 +78,116 @@ class OrderSummaryScreen extends StatelessWidget {
           'Smart Canteen',
           style: TextStyle(fontWeight: FontWeight.w700),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.shopping_cart_outlined),
-            onPressed: () {},
-          ),
-          const SizedBox(width: 8),
-        ],
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Your Order',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.text,
+      body: entries.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.shopping_cart_outlined,
+                    size: 64,
+                    color: AppTheme.border,
                   ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppTheme.green.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Text(
-                    '2 Items',
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Your cart is empty',
                     style: TextStyle(
-                      color: AppTheme.green,
+                      fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      fontSize: 12,
+                      color: AppTheme.mutedText,
                     ),
                   ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Add items from the menu to get started',
+                    style: TextStyle(fontSize: 12, color: AppTheme.mutedText),
+                  ),
+                  const SizedBox(height: 24),
+                  SmartCanteenButton(
+                    label: 'Browse Menu',
+                    onPressed: () =>
+                        Navigator.pushReplacementNamed(context, '/menu'),
+                    height: 48,
+                    radius: 14,
+                  ),
+                ],
+              ),
+            )
+          : Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Your Order',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.text,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.green.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '${cart.totalItems} Item${cart.totalItems == 1 ? '' : 's'}',
+                          style: const TextStyle(
+                            color: AppTheme.green,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: ListView.separated(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: entries.length,
+                    separatorBuilder: (_, _) =>
+                        const Divider(height: 32, color: AppTheme.border),
+                    itemBuilder: (context, index) {
+                      return OrderItemCard(
+                        entry: entries[index],
+                        onIncrement: () =>
+                            cart.increment(entries[index].item.id),
+                        onDecrement: () =>
+                            cart.decrement(entries[index].item.id),
+                      );
+                    },
+                  ),
+                ),
+                _PaymentSummarySection(
+                  cart: cart,
+                  onPay: () => _showPaymentSuccess(context),
                 ),
               ],
             ),
-          ),
-          Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: 2,
-              separatorBuilder: (context, index) => const Divider(height: 32, color: AppTheme.border),
-              itemBuilder: (context, index) {
-                return const OrderItemCard();
-              },
-            ),
-          ),
-          const PaymentSummarySection(),
-        ],
-      ),
       bottomNavigationBar: SmartCanteenNavigationBarButton(
         currentIndex: 1,
-        onTap: (index) {
-          if (index == 0) Navigator.pushReplacementNamed(context, '/home');
-          if (index == 1) Navigator.pushReplacementNamed(context, '/menu');
+        onTap: (i) {
+          switch (i) {
+            case 0:
+              Navigator.pushReplacementNamed(context, '/home');
+            case 1:
+              Navigator.pushReplacementNamed(context, '/menu');
+            case 2:
+              Navigator.pushReplacementNamed(context, '/qr');
+            case 3:
+              Navigator.pushReplacementNamed(context, '/history');
+            case 4:
+              Navigator.pushReplacementNamed(context, '/profile');
+          }
         },
       ),
     );
@@ -85,62 +195,108 @@ class OrderSummaryScreen extends StatelessWidget {
 }
 
 class OrderItemCard extends StatelessWidget {
-  const OrderItemCard({super.key});
+  const OrderItemCard({
+    super.key,
+    required this.entry,
+    required this.onIncrement,
+    required this.onDecrement,
+  });
+
+  final CartEntry entry;
+  final VoidCallback onIncrement;
+  final VoidCallback onDecrement;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 80,
-          height: 80,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            color: const Color(0xFFEAF6EA),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: SizedBox(
+            width: 80,
+            height: 80,
+            child: _OrderItemImage(entry: entry),
           ),
-          child: const Icon(Icons.fastfood, color: AppTheme.green, size: 36),
         ),
         const SizedBox(width: 14),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Chicken with Rice',
-                style: TextStyle(
+              Text(
+                entry.item.name,
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                   color: AppTheme.text,
                 ),
               ),
               const SizedBox(height: 4),
-              const Wrap(
+              Wrap(
                 spacing: 6,
-                children: [
-                  _SmallTag(label: 'Sweet'),
-                  _SmallTag(label: 'Soft'),
-                ],
+                children: entry.item.tags.take(2).map((t) => _SmallTag(label: t)).toList(),
               ),
               const SizedBox(height: 8),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    '\$3.50',
-                    style: TextStyle(
+                  Text(
+                    '\$${(entry.item.price * entry.quantity).toStringAsFixed(2)}',
+                    style: const TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.green,
                     ),
                   ),
-                  const QuantityController(),
+                  QuantityController(
+                    quantity: entry.quantity,
+                    onIncrement: onIncrement,
+                    onDecrement: onDecrement,
+                  ),
                 ],
               ),
             ],
           ),
         ),
       ],
+    );
+  }
+}
+
+class _OrderItemImage extends StatelessWidget {
+  const _OrderItemImage({required this.entry});
+  final CartEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    if (entry.item.imagePath != null) {
+      return Image.asset(
+        entry.item.imagePath!,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => _placeholder(),
+      );
+    }
+    return _placeholder();
+  }
+
+  Widget _placeholder() {
+    final idx = entry.item.colorSeed % kFoodGradients.length;
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: kFoodGradients[idx],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Center(
+        child: Icon(
+          kFoodIcons[idx % kFoodIcons.length],
+          color: AppTheme.green,
+          size: 32,
+        ),
+      ),
     );
   }
 }
@@ -154,7 +310,7 @@ class _SmallTag extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: AppTheme.border.withOpacity(0.5),
+        color: AppTheme.border.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
@@ -166,7 +322,16 @@ class _SmallTag extends StatelessWidget {
 }
 
 class QuantityController extends StatelessWidget {
-  const QuantityController({super.key});
+  const QuantityController({
+    super.key,
+    required this.quantity,
+    required this.onIncrement,
+    required this.onDecrement,
+  });
+
+  final int quantity;
+  final VoidCallback onIncrement;
+  final VoidCallback onDecrement;
 
   @override
   Widget build(BuildContext context) {
@@ -180,17 +345,17 @@ class QuantityController extends StatelessWidget {
         children: [
           IconButton(
             icon: const Icon(Icons.remove, size: 16, color: AppTheme.green),
-            onPressed: () {},
+            onPressed: onDecrement,
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 30, minHeight: 40),
           ),
-          const Text(
-            '1',
-            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+          Text(
+            '$quantity',
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
           ),
           IconButton(
             icon: const Icon(Icons.add, size: 16, color: AppTheme.green),
-            onPressed: () {},
+            onPressed: onIncrement,
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 30, minHeight: 40),
           ),
@@ -200,8 +365,11 @@ class QuantityController extends StatelessWidget {
   }
 }
 
-class PaymentSummarySection extends StatelessWidget {
-  const PaymentSummarySection({super.key});
+class _PaymentSummarySection extends StatelessWidget {
+  const _PaymentSummarySection({required this.cart, required this.onPay});
+
+  final CartModel cart;
+  final VoidCallback onPay;
 
   @override
   Widget build(BuildContext context) {
@@ -212,7 +380,7 @@ class PaymentSummarySection extends StatelessWidget {
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 20,
             offset: const Offset(0, -10),
           ),
@@ -220,24 +388,35 @@ class PaymentSummarySection extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const _SummaryRow(label: 'Subtotal', value: '\$4.25'),
+          _SummaryRow(
+            label: 'Subtotal',
+            value: '\$${cart.subtotal.toStringAsFixed(2)}',
+          ),
           const SizedBox(height: 10),
-          const _SummaryRow(label: 'Total Discount', value: '- \$1.00', valueColor: Colors.redAccent),
-          const SizedBox(height: 10),
-          const _SummaryRow(label: 'Service Fee', value: '\$0.50'),
+          if (cart.discount > 0)
+            _SummaryRow(
+              label: 'Scholar Discount',
+              value: '- \$${cart.discount.toStringAsFixed(2)}',
+              valueColor: Colors.redAccent,
+            ),
+          if (cart.discount > 0) const SizedBox(height: 10),
+          _SummaryRow(
+            label: 'Service Fee',
+            value: '\$${cart.serviceFee.toStringAsFixed(2)}',
+          ),
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 16),
             child: Divider(color: AppTheme.border),
           ),
-          const _SummaryRow(
+          _SummaryRow(
             label: 'Total Amount',
-            value: '\$3.75',
+            value: '\$${cart.total.toStringAsFixed(2)}',
             isTotal: true,
           ),
           const SizedBox(height: 24),
           SmartCanteenButton(
             label: 'Proceed to Payment  →',
-            onPressed: () {},
+            onPressed: onPay,
             height: 56,
             radius: 16,
           ),

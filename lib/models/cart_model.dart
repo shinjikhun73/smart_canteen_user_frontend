@@ -1,0 +1,73 @@
+import 'package:flutter/widgets.dart';
+
+import 'food_item.dart';
+
+class CartEntry {
+  final FoodItem item;
+  int quantity;
+
+  CartEntry({required this.item, this.quantity = 1});
+}
+
+class CartModel extends ChangeNotifier {
+  final List<CartEntry> _entries = [];
+
+  List<CartEntry> get entries => List.unmodifiable(_entries);
+
+  int get totalItems => _entries.fold(0, (s, e) => s + e.quantity);
+
+  double get subtotal =>
+      _entries.fold(0.0, (s, e) => s + e.item.price * e.quantity);
+
+  double get discount => subtotal >= 3.0 ? 1.00 : 0.0;
+
+  double get serviceFee => _entries.isEmpty ? 0.0 : 0.50;
+
+  double get total => subtotal - discount + serviceFee;
+
+  void add(FoodItem item) {
+    final idx = _entries.indexWhere((e) => e.item.id == item.id);
+    if (idx >= 0) {
+      _entries[idx].quantity++;
+    } else {
+      _entries.add(CartEntry(item: item));
+    }
+    notifyListeners();
+  }
+
+  void increment(String id) {
+    final idx = _entries.indexWhere((e) => e.item.id == id);
+    if (idx >= 0) {
+      _entries[idx].quantity++;
+      notifyListeners();
+    }
+  }
+
+  void decrement(String id) {
+    final idx = _entries.indexWhere((e) => e.item.id == id);
+    if (idx >= 0) {
+      if (_entries[idx].quantity <= 1) {
+        _entries.removeAt(idx);
+      } else {
+        _entries[idx].quantity--;
+      }
+      notifyListeners();
+    }
+  }
+
+  int quantityOf(String id) {
+    final idx = _entries.indexWhere((e) => e.item.id == id);
+    return idx >= 0 ? _entries[idx].quantity : 0;
+  }
+}
+
+class CartProvider extends InheritedNotifier<CartModel> {
+  const CartProvider({
+    super.key,
+    required CartModel cart,
+    required super.child,
+  }) : super(notifier: cart);
+
+  static CartModel of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<CartProvider>()!.notifier!;
+}
