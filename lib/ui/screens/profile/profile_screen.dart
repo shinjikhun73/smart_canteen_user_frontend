@@ -11,61 +11,142 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Profile',
-          style: TextStyle(fontWeight: FontWeight.w700),
-        ),
-      ),
+      backgroundColor: AppTheme.background,
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.zero,
         children: [
-          Center(
+          // ── Gradient header ───────────────────────────────────────────────
+          Container(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              MediaQuery.of(context).padding.top + 16,
+              20,
+              32,
+            ),
+            decoration: BoxDecoration(
+              gradient: AppTheme.headerGradient,
+            ),
             child: Column(
               children: [
-                Container(
-                  width: 88,
-                  height: 88,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppTheme.border,
-                    border: Border.all(color: AppTheme.green, width: 3),
-                  ),
-                  child: const Icon(
-                    Icons.person,
-                    size: 48,
-                    color: AppTheme.green,
-                  ),
+                // Top bar
+                Row(
+                  children: [
+                    const Text(
+                      'My Profile',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Settings — coming soon'),
+                          behavior: SnackBarBehavior.floating,
+                          backgroundColor: AppTheme.green,
+                        ),
+                      ),
+                      child: Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(11),
+                        ),
+                        child: const Icon(
+                          Icons.settings_outlined,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 24),
+                // Avatar
+                Stack(
+                  children: [
+                    Container(
+                      width: 86,
+                      height: 86,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white,
+                        border: Border.all(color: Colors.white, width: 3),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.2),
+                            blurRadius: 18,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
+                      ),
+                      alignment: Alignment.center,
+                      child: const Text(
+                        'JD',
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.green,
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.12),
+                              blurRadius: 6,
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.camera_alt_rounded,
+                          size: 14,
+                          color: AppTheme.green,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
                 const Text(
                   'John Doe',
                   style: TextStyle(
-                    fontSize: 18,
+                    color: Colors.white,
+                    fontSize: 20,
                     fontWeight: FontWeight.w700,
-                    color: AppTheme.text,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 5),
                 const Text(
                   'john.doe@cadt.edu.kh',
-                  style: TextStyle(fontSize: 13, color: AppTheme.mutedText),
+                  style: TextStyle(color: Colors.white70, fontSize: 13),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 12),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppTheme.green.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    color: Colors.white.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.3),
+                    ),
                   ),
                   child: const Text(
                     'CADT Scholar',
                     style: TextStyle(
-                      color: AppTheme.green,
-                      fontSize: 11,
+                      color: Colors.white,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -73,18 +154,99 @@ class ProfileScreen extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              _StatCard(label: 'Orders', value: '24'),
-              const SizedBox(width: 12),
-              _StatCard(label: 'Balance', value: '16.25'),
-              const SizedBox(width: 12),
-              _StatCard(label: 'Points', value: '320'),
-            ],
+
+          // ── Stats card ────────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 20,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: IntrinsicHeight(
+                child: Row(
+                  children: [
+                    const Expanded(child: _StatItem(value: '24', label: 'Orders')),
+                    VerticalDivider(
+                      width: 1,
+                      color: AppTheme.border,
+                      indent: 8,
+                      endIndent: 8,
+                    ),
+                    const Expanded(child: _StatItem(value: '\$16.25', label: 'Balance')),
+                    VerticalDivider(
+                      width: 1,
+                      color: AppTheme.border,
+                      indent: 8,
+                      endIndent: 8,
+                    ),
+                    const Expanded(child: _StatItem(value: '320', label: 'Points')),
+                  ],
+                ),
+              ),
+            ),
           ),
-          const SizedBox(height: 24),
-          ..._menuItems(context),
+
+          // ── Menu items card ───────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.06),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: _buildMenuItems(context),
+              ),
+            ),
+          ),
+
+          // ── Logout button ─────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+            child: GestureDetector(
+              onTap: () =>
+                  Navigator.pushNamedAndRemoveUntil(context, '/', (_) => false),
+              child: Container(
+                height: 52,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFEBEE),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFFFCDD2)),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.logout_rounded, color: Color(0xFFE53935), size: 20),
+                    SizedBox(width: 8),
+                    Text(
+                      'Log Out',
+                      style: TextStyle(
+                        color: Color(0xFFE53935),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ],
       ),
       bottomNavigationBar: SmartCanteenNavigationBarButton(
@@ -94,40 +256,27 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  List<Widget> _menuItems(BuildContext context) {
+  List<Widget> _buildMenuItems(BuildContext context) {
     final items = [
-      (Icons.edit_outlined, 'Edit Profile'),
-      (Icons.credit_card_outlined, 'Payment Methods'),
-      (Icons.history, 'Order History'),
-      (Icons.notifications_outlined, 'Notifications'),
-      (Icons.info_outline, 'About'),
+      (Icons.edit_outlined, 'Edit Profile', 'Update your info'),
+      (Icons.credit_card_outlined, 'Payment Methods', 'Manage your cards'),
+      (Icons.history, 'Order History', 'View past orders'),
+      (Icons.notifications_outlined, 'Notifications', 'Set your preferences'),
+      (Icons.info_outline, 'About', 'App info & version'),
     ];
 
-    return [
-      ...items.map(
-        (item) => Column(
-          children: [
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppTheme.border.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(item.$1, color: AppTheme.green, size: 20),
-              ),
-              title: Text(
-                item.$2,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w500,
-                  color: AppTheme.text,
-                ),
-              ),
-              trailing: const Icon(
-                Icons.chevron_right,
-                color: AppTheme.mutedText,
+    return List.generate(items.length, (i) {
+      final item = items[i];
+      final isLast = i == items.length - 1;
+
+      return Column(
+        children: [
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.vertical(
+                top: i == 0 ? const Radius.circular(20) : Radius.zero,
+                bottom: isLast ? const Radius.circular(20) : Radius.zero,
               ),
               onTap: () => ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -136,52 +285,92 @@ class ProfileScreen extends StatelessWidget {
                   backgroundColor: AppTheme.green,
                 ),
               ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: AppTheme.greenSurface,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(item.$1, color: AppTheme.green, size: 20),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.$2,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.text,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            item.$3,
+                            style: const TextStyle(
+                              color: AppTheme.mutedText,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 13,
+                      color: AppTheme.mutedText,
+                    ),
+                  ],
+                ),
+              ),
             ),
-            const Divider(color: AppTheme.border, height: 1),
-          ],
-        ),
-      ),
-      const SizedBox(height: 16),
-      SmartCanteenButton(
-        label: 'Log Out',
-        fillColor: const Color(0xFFFFEBEE),
-        textColor: Colors.redAccent,
-        onPressed: () =>
-            Navigator.pushNamedAndRemoveUntil(context, '/', (_) => false),
-      ),
-    ];
+          ),
+          if (!isLast)
+            const Divider(
+              indent: 70,
+              endIndent: 16,
+              height: 1,
+              color: AppTheme.border,
+            ),
+        ],
+      );
+    });
   }
 }
 
-class _StatCard extends StatelessWidget {
-  const _StatCard({required this.label, required this.value});
+// ── Supporting widgets ────────────────────────────────────────────────────────
 
-  final String label;
+class _StatItem extends StatelessWidget {
+  const _StatItem({required this.value, required this.label});
+
   final String value;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: FancyCard(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        child: Column(
-          children: [
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: AppTheme.green,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: const TextStyle(fontSize: 11, color: AppTheme.mutedText),
-            ),
-          ],
+    return Column(
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: AppTheme.green,
+          ),
         ),
-      ),
+        const SizedBox(height: 5),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12, color: AppTheme.mutedText),
+        ),
+      ],
     );
   }
 }

@@ -12,44 +12,132 @@ class SmartCanteenNavigationBarButton extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
 
+  static const _labels = ['Home', 'Menu', 'QR Pay', 'History', 'Profile'];
+  static const _icons = [
+    Icons.home_rounded,
+    Icons.restaurant_menu_rounded,
+    Icons.qr_code_2,
+    Icons.receipt_long_rounded,
+    Icons.person_rounded,
+  ];
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       top: false,
-      child: ClipRRect(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        child: BottomNavigationBar(
-          currentIndex: currentIndex,
-          onTap: onTap,
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: AppTheme.green,
-          elevation: 0,
-          selectedItemColor: Colors.white,
-          unselectedItemColor: Colors.white.withValues(alpha: 0.7),
-          showSelectedLabels: false,
-          showUnselectedLabels: false,
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home_rounded),
-              label: 'Home',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.restaurant_menu),
-              label: 'Search',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.qr_code_2),
-              label: 'QR Scan',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.history),
-              label: 'History',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline),
-              label: 'Profile',
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.09),
+              blurRadius: 24,
+              offset: const Offset(0, -6),
             ),
           ],
+        ),
+        child: Row(
+          children: List.generate(5, (i) {
+            final isSelected = i == currentIndex;
+
+            // QR center elevated button
+            if (i == 2) {
+              return Expanded(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => onTap(i),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 52,
+                          height: 52,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF1B5E20), Color(0xFF4CAF50)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppTheme.green.withValues(alpha: 0.45),
+                                blurRadius: 14,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(Icons.qr_code_2, color: Colors.white, size: 24),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          'QR Pay',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.green,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            return Expanded(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => onTap(i),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppTheme.green.withValues(alpha: 0.12)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          _icons[i],
+                          size: 22,
+                          color: isSelected ? AppTheme.green : AppTheme.mutedText,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _labels[i],
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                          color: isSelected ? AppTheme.green : AppTheme.mutedText,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: isSelected ? 16 : 0,
+                        height: 3,
+                        decoration: BoxDecoration(
+                          color: AppTheme.green,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }),
         ),
       ),
     );

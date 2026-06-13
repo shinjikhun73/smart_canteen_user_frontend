@@ -28,65 +28,20 @@ class _HomeScreenState extends State<HomeScreen> {
     return items.take(4).toList();
   }
 
-  void _showTopUpDialog() {
-    showDialog<void>(
+  void _showTopUpSheet() {
+    showModalBottomSheet<void>(
       context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'Top Up Balance',
-          style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.green),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Select amount to top up:', style: TextStyle(color: AppTheme.mutedText)),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: ['\$5', '\$10', '\$20', '\$50'].map((amt) {
-                return GestureDetector(
-                  onTap: () {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('$amt top-up request submitted'),
-                        behavior: SnackBarBehavior.floating,
-                        backgroundColor: AppTheme.green,
-                      ),
-                    );
-                  },
-                  child: Container(
-                    width: 72,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF4FFE9),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppTheme.border),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      amt,
-                      style: const TextStyle(
-                        color: AppTheme.green,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: AppTheme.mutedText)),
-          ),
-        ],
-      ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _TopUpSheet(parentContext: context),
     );
+  }
+
+  String get _greeting {
+    final h = DateTime.now().hour;
+    if (h < 12) return 'Good morning,';
+    if (h < 17) return 'Good afternoon,';
+    return 'Good evening,';
   }
 
   @override
@@ -94,149 +49,136 @@ class _HomeScreenState extends State<HomeScreen> {
     final cart = CartProvider.of(context);
 
     return Scaffold(
+      backgroundColor: AppTheme.background,
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.zero,
           children: [
-            Row(
-              children: [
-                const Expanded(
-                  child: Text(
-                    'Hello, John!',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.green,
-                    ),
-                  ),
-                ),
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    IconButton(
-                      onPressed: () =>
-                          Navigator.pushNamed(context, '/order-summary'),
-                      icon: const Icon(
-                        Icons.shopping_cart_outlined,
-                        color: AppTheme.green,
-                      ),
-                    ),
-                    if (cart.totalItems > 0)
-                      Positioned(
-                        right: 6,
-                        top: 6,
-                        child: Container(
-                          width: 18,
-                          height: 18,
-                          decoration: const BoxDecoration(
-                            color: Colors.redAccent,
-                            shape: BoxShape.circle,
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            '${cart.totalItems}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ],
+            _Header(
+              greeting: _greeting,
+              cartCount: cart.totalItems,
+              onCartTap: () => Navigator.pushNamed(context, '/order-summary'),
+              onNotifTap: () {},
             ),
-            const Divider(color: AppTheme.border),
-            const SizedBox(height: 12),
-            _BalanceCard(
-              width: MediaQuery.sizeOf(context).width,
-              onTopUp: _showTopUpDialog,
-              onQr: () => Navigator.pushNamed(context, '/qr'),
-            ),
-            const SizedBox(height: 18),
-            const _SectionHeader(title: 'Active Coupons'),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _CouponCard(
-                    title: 'Breakfast',
-                    time: '7:00 am – 9:00 am',
-                    icon: Icons.wb_sunny_outlined,
-                    onTap: () => Navigator.pushNamed(context, '/qr'),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _CouponCard(
-                    title: 'Lunch',
-                    time: '11:00 am – 1:00 pm',
-                    icon: Icons.lunch_dining_outlined,
-                    onTap: () => Navigator.pushNamed(context, '/qr'),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 18),
-            const _PromoBanner(),
-            const SizedBox(height: 18),
-            Row(
-              children: [
-                const Expanded(child: _SectionHeader(title: "Today's Menu")),
-                TextButton(
-                  onPressed: () =>
-                      Navigator.pushReplacementNamed(context, '/menu'),
-                  child: const Text(
-                    'View More >>',
-                    style: TextStyle(color: AppTheme.green),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: List.generate(_filterLabels.length, (i) {
-                  return Padding(
-                    padding: EdgeInsets.only(right: i < _filterLabels.length - 1 ? 10 : 0),
-                    child: GestureDetector(
-                      onTap: () => setState(() => _selectedFilter = i),
-                      child: MenuChip(
-                        label: _filterLabels[i],
-                        selected: _selectedFilter == i,
-                      ),
-                    ),
-                  );
-                }),
+            const SizedBox(height: 20),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: _BalanceCard(
+                onTopUp: _showTopUpSheet,
+                onQr: () => Navigator.pushNamed(context, '/qr'),
+                onHistory: () => Navigator.pushNamed(context, '/history'),
               ),
             ),
-            const SizedBox(height: 14),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final crossAxisCount = constraints.maxWidth > 500 ? 3 : 2;
-                final items = _filteredItems;
-                return GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: items.length,
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: crossAxisCount,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: 0.78,
-                  ),
-                  itemBuilder: (context, index) {
-                    final item = items[index];
-                    return _FoodCard(
-                      item: item,
-                      onAdd: () => CartProvider.of(context).add(item),
-                    );
-                  },
-                );
-              },
+            const SizedBox(height: 24),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: const _SectionHeader(title: 'Meal Passes'),
             ),
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _MealPassCard(
+                      title: 'Breakfast',
+                      time: '7:00 – 9:00 AM',
+                      icon: Icons.wb_sunny_rounded,
+                      isActive: true,
+                      onTap: () => Navigator.pushNamed(context, '/qr'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _MealPassCard(
+                      title: 'Lunch',
+                      time: '11:00 AM – 1:00 PM',
+                      icon: Icons.lunch_dining_rounded,
+                      isActive: false,
+                      onTap: () => Navigator.pushNamed(context, '/qr'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: const _PromoBanner(),
+            ),
+            const SizedBox(height: 24),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: _SectionHeader(
+                title: "Today's Menu",
+                actionLabel: 'View all',
+                onAction: () => Navigator.pushReplacementNamed(context, '/menu'),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 36,
+              child: ListView.separated(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                scrollDirection: Axis.horizontal,
+                itemCount: _filterLabels.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
+                itemBuilder: (_, i) => GestureDetector(
+                  onTap: () => setState(() => _selectedFilter = i),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: _selectedFilter == i ? AppTheme.green : Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: _selectedFilter == i ? AppTheme.green : AppTheme.border,
+                      ),
+                      boxShadow: _selectedFilter == i
+                          ? [
+                              BoxShadow(
+                                color: AppTheme.green.withValues(alpha: 0.28),
+                                blurRadius: 8,
+                                offset: const Offset(0, 3),
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: Text(
+                      _filterLabels[i],
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: _selectedFilter == i ? Colors.white : AppTheme.mutedText,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _filteredItems.length,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 16,
+                  crossAxisSpacing: 16,
+                  childAspectRatio: 0.72,
+                ),
+                itemBuilder: (context, index) {
+                  final item = _filteredItems[index];
+                  return _FoodCard(
+                    item: item,
+                    onAdd: () => CartProvider.of(context).add(item),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 24),
           ],
         ),
       ),
@@ -244,10 +186,14 @@ class _HomeScreenState extends State<HomeScreen> {
         currentIndex: 0,
         onTap: (i) {
           switch (i) {
-            case 1: Navigator.pushReplacementNamed(context, '/menu');
-            case 2: Navigator.pushNamed(context, '/qr');
-            case 3: Navigator.pushNamed(context, '/history');
-            case 4: Navigator.pushNamed(context, '/profile');
+            case 1:
+              Navigator.pushReplacementNamed(context, '/menu');
+            case 2:
+              Navigator.pushNamed(context, '/qr');
+            case 3:
+              Navigator.pushNamed(context, '/history');
+            case 4:
+              Navigator.pushNamed(context, '/profile');
           }
         },
       ),
@@ -257,88 +203,330 @@ class _HomeScreenState extends State<HomeScreen> {
 
 // ── Widgets ──────────────────────────────────────────────────────────────────
 
-class _BalanceCard extends StatelessWidget {
-  const _BalanceCard({
-    required this.width,
-    required this.onTopUp,
-    required this.onQr,
+class _Header extends StatelessWidget {
+  const _Header({
+    required this.greeting,
+    required this.cartCount,
+    required this.onCartTap,
+    required this.onNotifTap,
   });
 
-  final double width;
-  final VoidCallback onTopUp;
-  final VoidCallback onQr;
+  final String greeting;
+  final int cartCount;
+  final VoidCallback onCartTap;
+  final VoidCallback onNotifTap;
 
   @override
   Widget build(BuildContext context) {
-    return FancyCard(
-      radius: 18,
-      backgroundColor: const Color(0xFFF4FFE9),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+      child: Row(
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF2E7D32), Color(0xFF4CAF50)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: const Text(
+              'JD',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                fontSize: 15,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  greeting,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.mutedText,
+                  ),
+                ),
+                const Text(
+                  'John Doe',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.text,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          _ActionIcon(icon: Icons.notifications_outlined, onTap: onNotifTap),
+          const SizedBox(width: 8),
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              _ActionIcon(icon: Icons.shopping_bag_outlined, onTap: onCartTap),
+              if (cartCount > 0)
+                Positioned(
+                  right: 2,
+                  top: 2,
+                  child: Container(
+                    width: 16,
+                    height: 16,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFE53935),
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      '$cartCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionIcon extends StatelessWidget {
+  const _ActionIcon({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.07),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Icon(icon, size: 20, color: AppTheme.text),
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title, this.actionLabel, this.onAction});
+
+  final String title;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w700,
+            color: AppTheme.text,
+          ),
+        ),
+        const Spacer(),
+        if (actionLabel != null && onAction != null)
+          GestureDetector(
+            onTap: onAction,
+            child: Text(
+              actionLabel!,
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppTheme.green,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _BalanceCard extends StatelessWidget {
+  const _BalanceCard({
+    required this.onTopUp,
+    required this.onQr,
+    required this.onHistory,
+  });
+
+  final VoidCallback onTopUp;
+  final VoidCallback onQr;
+  final VoidCallback onHistory;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: AppTheme.balanceCardGradient,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF2E7D32).withValues(alpha: 0.42),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
       child: Stack(
         children: [
           Positioned(
-            right: -18,
-            top: -14,
-            child: Opacity(
-              opacity: 0.18,
-              child: CanteenLogo(size: width * 0.34),
+            right: -28,
+            top: -28,
+            child: Container(
+              width: 140,
+              height: 140,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.06),
+              ),
+            ),
+          ),
+          Positioned(
+            right: 44,
+            bottom: -18,
+            child: Container(
+              width: 90,
+              height: 90,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.04),
+              ),
             ),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 120,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppTheme.green,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Text(
-                  'Balance',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                '៛65,000',
-                style: TextStyle(
-                  color: AppTheme.green,
-                  fontSize: 26,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 2),
-              const Text(
-                '~\$16.25',
-                style: TextStyle(color: AppTheme.green, fontSize: 12),
-              ),
-              const SizedBox(height: 10),
+              // Top row: wallet icon + label + active badge
               Row(
                 children: [
-                  Expanded(
-                    child: SmartCanteenButton(
-                      label: 'Top Up',
-                      onPressed: onTopUp,
-                      height: 40,
-                      radius: 10,
-                      leading: const Icon(Icons.add, size: 16, color: Colors.white),
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(11),
+                    ),
+                    child: const Icon(
+                      Icons.account_balance_wallet_rounded,
+                      color: Colors.white,
+                      size: 20,
                     ),
                   ),
                   const SizedBox(width: 10),
-                  GestureDetector(
-                    onTap: onQr,
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: AppTheme.green,
-                        borderRadius: BorderRadius.circular(12),
+                  const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'My Wallet',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                      child: const Icon(Icons.qr_code_2, color: Colors.white, size: 26),
+                      Text(
+                        'CADT Scholar',
+                        style: TextStyle(color: Colors.white60, fontSize: 11),
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.circle, color: Color(0xFF69F0AE), size: 7),
+                        SizedBox(width: 5),
+                        Text(
+                          'Active',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 22),
+              // Balance amount
+              const Text(
+                '៛65,000',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 36,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const SizedBox(height: 5),
+              const Text(
+                '≈ \$16.25 USD',
+                style: TextStyle(color: Colors.white60, fontSize: 13),
+              ),
+              const SizedBox(height: 22),
+              // Action buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: _BalanceBtn(
+                      label: 'Top Up',
+                      icon: Icons.add_rounded,
+                      isPrimary: true,
+                      onTap: onTopUp,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _BalanceBtn(
+                      label: 'QR Pay',
+                      icon: Icons.qr_code_2,
+                      isPrimary: false,
+                      onTap: onQr,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _BalanceBtn(
+                      label: 'History',
+                      icon: Icons.receipt_long_rounded,
+                      isPrimary: false,
+                      onTap: onHistory,
                     ),
                   ),
                 ],
@@ -351,85 +539,150 @@ class _BalanceCard extends StatelessWidget {
   }
 }
 
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      title,
-      style: const TextStyle(
-        color: AppTheme.green,
-        fontSize: 14,
-        fontWeight: FontWeight.w700,
-      ),
-    );
-  }
-}
-
-class _CouponCard extends StatelessWidget {
-  const _CouponCard({
-    required this.title,
-    required this.time,
+class _BalanceBtn extends StatelessWidget {
+  const _BalanceBtn({
+    required this.label,
     required this.icon,
+    required this.isPrimary,
     required this.onTap,
   });
 
-  final String title;
-  final String time;
+  final String label;
   final IconData icon;
+  final bool isPrimary;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: FancyCard(
-        padding: const EdgeInsets.all(12),
-        radius: 16,
+      child: Container(
+        height: 44,
+        decoration: BoxDecoration(
+          color: isPrimary ? Colors.white : Colors.white.withValues(alpha: 0.13),
+          borderRadius: BorderRadius.circular(12),
+          border: isPrimary ? null : Border.all(color: Colors.white.withValues(alpha: 0.3)),
+        ),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: const Color(0xFFEAF6EA),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: AppTheme.green),
+            Icon(
+              icon,
+              size: 15,
+              color: isPrimary ? const Color(0xFF2E7D32) : Colors.white,
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: AppTheme.green,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    time,
-                    style: const TextStyle(color: AppTheme.mutedText, fontSize: 10),
-                  ),
-                ],
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: isPrimary ? const Color(0xFF2E7D32) : Colors.white,
               ),
             ),
-            Container(
-              width: 30,
-              height: 30,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppTheme.border),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MealPassCard extends StatelessWidget {
+  const _MealPassCard({
+    required this.title,
+    required this.time,
+    required this.icon,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  final String title;
+  final String time;
+  final IconData icon;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: isActive ? AppTheme.green : Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: isActive
+                  ? AppTheme.green.withValues(alpha: 0.3)
+                  : Colors.black.withValues(alpha: 0.06),
+              blurRadius: 14,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: isActive
+                        ? Colors.white.withValues(alpha: 0.2)
+                        : AppTheme.greenSurface,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 18,
+                    color: isActive ? Colors.white : AppTheme.green,
+                  ),
+                ),
+                const Spacer(),
+                Icon(
+                  Icons.qr_code_2,
+                  size: 18,
+                  color: isActive ? Colors.white60 : AppTheme.mutedText,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 14,
+                color: isActive ? Colors.white : AppTheme.text,
               ),
-              child: const Icon(Icons.qr_code_2, size: 18),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              time,
+              style: TextStyle(
+                fontSize: 11,
+                color: isActive ? Colors.white70 : AppTheme.mutedText,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: isActive
+                    ? Colors.white.withValues(alpha: 0.2)
+                    : AppTheme.border,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                isActive ? 'Active' : 'Upcoming',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: isActive ? Colors.white : AppTheme.mutedText,
+                ),
+              ),
             ),
           ],
         ),
@@ -443,10 +696,23 @@ class _PromoBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FancyCard(
-      padding: const EdgeInsets.all(12),
-      radius: 18,
-      backgroundColor: AppTheme.green,
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF2E7D32), Color(0xFF4CAF50)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.green.withValues(alpha: 0.3),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
       child: Row(
         children: [
           Expanded(
@@ -454,51 +720,83 @@ class _PromoBanner extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Fresh Daily Campus Food',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Text(
+                    'EXCLUSIVE OFFER',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.2,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Exclusive 20% Discount for\nCADT Scholars this week',
-                  style: TextStyle(color: Colors.white, fontSize: 11, height: 1.35),
+                  'Fresh Daily\nCampus Food',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
+                    height: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  '20% off for CADT Scholars\nthis week only',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 11,
+                    height: 1.4,
+                  ),
                 ),
                 const SizedBox(height: 12),
-                SmartCanteenButton(
-                  label: 'Claim Now',
-                  onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+                GestureDetector(
+                  onTap: () => ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Discount coupon applied!'),
                       behavior: SnackBarBehavior.floating,
                       backgroundColor: AppTheme.green,
                     ),
                   ),
-                  height: 34,
-                  radius: 10,
-                  fillColor: Colors.white,
-                  textColor: AppTheme.green,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Text(
+                      'Claim Now',
+                      style: TextStyle(
+                        color: Color(0xFF2E7D32),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Expanded(
             flex: 2,
             child: Container(
-              height: 110,
+              height: 130,
               decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(16),
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFDDF2D9), Color(0xFFF9F5D7)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
               ),
-              child: const Icon(Icons.ramen_dining, color: AppTheme.green, size: 58),
+              child: const Icon(
+                Icons.ramen_dining_rounded,
+                color: Colors.white,
+                size: 64,
+              ),
             ),
           ),
         ],
@@ -515,43 +813,89 @@ class _FoodCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FancyCard(
-      padding: const EdgeInsets.all(10),
-      radius: 16,
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.07),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
               child: _FoodThumbnail(item: item),
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            item.name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: AppTheme.green,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            '\$${item.price.toStringAsFixed(2)}',
-            style: const TextStyle(color: AppTheme.text, fontSize: 11),
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 30,
-            child: SmartCanteenButton(
-              label: 'Add',
-              onPressed: onAdd,
-              height: 30,
-              radius: 8,
-              leading: const Icon(Icons.add_shopping_cart, size: 14, color: Colors.white),
+          Padding(
+            padding: const EdgeInsets.all(10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    color: AppTheme.text,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Icon(Icons.star_rounded, color: Color(0xFFFFA726), size: 13),
+                    const SizedBox(width: 3),
+                    Text(
+                      item.rating.toStringAsFixed(1),
+                      style: const TextStyle(color: AppTheme.mutedText, fontSize: 11),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '\$${item.price.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        color: AppTheme.green,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: onAdd,
+                  child: Container(
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: AppTheme.green,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.add_shopping_cart_rounded, color: Colors.white, size: 13),
+                        SizedBox(width: 5),
+                        Text(
+                          'Add',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -593,6 +937,95 @@ class _FoodThumbnail extends StatelessWidget {
       ),
       child: Center(
         child: Icon(kFoodIcons[idx % kFoodIcons.length], color: AppTheme.green, size: 52),
+      ),
+    );
+  }
+}
+
+class _TopUpSheet extends StatelessWidget {
+  const _TopUpSheet({required this.parentContext});
+
+  final BuildContext parentContext;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 12),
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: AppTheme.border,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'Top Up Balance',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.text,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Select an amount to add to your wallet',
+            style: TextStyle(color: AppTheme.mutedText, fontSize: 13),
+          ),
+          const SizedBox(height: 24),
+          GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: 2,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 2.8,
+            children: ['\$5', '\$10', '\$20', '\$50'].map((amt) {
+              return GestureDetector(
+                onTap: () {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(parentContext).showSnackBar(
+                    SnackBar(
+                      content: Text('$amt top-up request submitted'),
+                      behavior: SnackBarBehavior.floating,
+                      backgroundColor: AppTheme.green,
+                    ),
+                  );
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppTheme.greenSurface,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppTheme.border),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    amt,
+                    style: const TextStyle(
+                      color: AppTheme.green,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 16),
+          SmartCanteenButton(
+            label: 'Enter Custom Amount',
+            onPressed: () => Navigator.pop(context),
+          ),
+        ],
       ),
     );
   }
