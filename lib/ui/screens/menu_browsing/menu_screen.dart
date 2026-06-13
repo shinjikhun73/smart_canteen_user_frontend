@@ -25,7 +25,8 @@ class _MenuScreenState extends State<MenuScreen> {
     final cat = _cats[_selectedFilter];
     return kMenuItems.where((f) {
       final matchCat = cat.isEmpty || f.category == cat;
-      final matchSearch = _search.isEmpty ||
+      final matchSearch =
+          _search.isEmpty ||
           f.name.toLowerCase().contains(_search.toLowerCase());
       return matchCat && matchSearch;
     }).toList();
@@ -52,8 +53,7 @@ class _MenuScreenState extends State<MenuScreen> {
             children: [
               IconButton(
                 icon: const Icon(Icons.shopping_cart_outlined),
-                onPressed: () =>
-                    Navigator.pushNamed(context, '/order-summary'),
+                onPressed: () => Navigator.pushNamed(context, '/order-summary'),
               ),
               if (cart.totalItems > 0)
                 Positioned(
@@ -121,7 +121,11 @@ class _MenuScreenState extends State<MenuScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.search_off, size: 48, color: AppTheme.border),
+                        Icon(
+                          Icons.search_off,
+                          size: 48,
+                          color: AppTheme.border,
+                        ),
                         SizedBox(height: 12),
                         Text(
                           'No items found',
@@ -141,8 +145,7 @@ class _MenuScreenState extends State<MenuScreen> {
                     },
                   ),
           ),
-          if (cart.totalItems > 0)
-            _BottomSummaryBar(cart: cart),
+          if (cart.totalItems > 0) _BottomSummaryBar(cart: cart),
         ],
       ),
       bottomNavigationBar: SmartCanteenNavigationBarButton(
@@ -367,24 +370,46 @@ class _BottomSummaryBar extends StatelessWidget {
           ),
           const SizedBox(width: 16),
           Expanded(
-            child: SmartCanteenButton(
-              label: 'View Cart',
-              onPressed: () =>
-                  Navigator.pushNamed(context, '/order-summary'),
-              height: 48,
-              radius: 12,
-              fillColor: AppTheme.accentBlue,
-              textColor: Colors.blueAccent,
+            child: Container(
+              decoration: BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.15), // shadow color
+                    blurRadius: 8, // softness
+                    offset: const Offset(0, 4), // position (x, y)
+                  ),
+                ],
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: SmartCanteenButton(
+                label: 'View Cart',
+                onPressed: () => Navigator.pushNamed(context, '/order-summary'),
+                height: 48,
+                radius: 12,
+                fillColor: Colors.white,
+                textColor: AppTheme.green,
+              ),
             ),
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: SmartCanteenButton(
-              label: 'Checkout',
-              onPressed: () =>
-                  Navigator.pushNamed(context, '/order-summary'),
-              height: 48,
-              radius: 12,
+            child: Container(
+              decoration: BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.15),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: SmartCanteenButton(
+                label: 'Checkout',
+                onPressed: () => Navigator.pushNamed(context, '/order-summary'),
+                height: 48,
+                radius: 12,
+              ),
             ),
           ),
         ],

@@ -1,12 +1,103 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../theme/app_theme.dart';
 import '../../widgets/smart_canteen_widgets.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
   static const routeName = '/profile';
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  File? _profileImage;
+  final _picker = ImagePicker();
+
+  Future<void> _pickImage(ImageSource source) async {
+    final picked = await _picker.pickImage(
+      source: source,
+      imageQuality: 85,
+      maxWidth: 512,
+      maxHeight: 512,
+    );
+    if (picked != null && mounted) {
+      setState(() => _profileImage = File(picked.path));
+    }
+  }
+
+  void _showImageSourceSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppTheme.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Change Profile Photo',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.text,
+                ),
+              ),
+              const SizedBox(height: 16),
+              _PickerOption(
+                icon: Icons.camera_alt_rounded,
+                label: 'Take Photo',
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickImage(ImageSource.camera);
+                },
+              ),
+              const SizedBox(height: 10),
+              _PickerOption(
+                icon: Icons.photo_library_rounded,
+                label: 'Choose from Gallery',
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickImage(ImageSource.gallery);
+                },
+              ),
+              if (_profileImage != null) ...[
+                const SizedBox(height: 10),
+                _PickerOption(
+                  icon: Icons.delete_outline_rounded,
+                  label: 'Remove Photo',
+                  isDestructive: true,
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    setState(() => _profileImage = null);
+                  },
+                ),
+              ],
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,9 +114,7 @@ class ProfileScreen extends StatelessWidget {
               20,
               32,
             ),
-            decoration: BoxDecoration(
-              gradient: AppTheme.headerGradient,
-            ),
+            decoration: BoxDecoration(gradient: AppTheme.headerGradient),
             child: Column(
               children: [
                 // Top bar
@@ -65,58 +154,71 @@ class ProfileScreen extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 24),
-                // Avatar
-                Stack(
-                  children: [
-                    Container(
-                      width: 86,
-                      height: 86,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.white,
-                        border: Border.all(color: Colors.white, width: 3),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.2),
-                            blurRadius: 18,
-                            offset: const Offset(0, 5),
-                          ),
-                        ],
-                      ),
-                      alignment: Alignment.center,
-                      child: const Text(
-                        'JD',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.green,
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      right: 0,
-                      bottom: 0,
-                      child: Container(
-                        width: 28,
-                        height: 28,
+                // Avatar with camera button
+                GestureDetector(
+                  onTap: _showImageSourceSheet,
+                  child: Stack(
+                    children: [
+                      Container(
+                        width: 86,
+                        height: 86,
                         decoration: BoxDecoration(
-                          color: Colors.white,
                           shape: BoxShape.circle,
+                          color: Colors.white,
+                          border: Border.all(color: Colors.white, width: 3),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.12),
-                              blurRadius: 6,
+                              color: Colors.black.withValues(alpha: 0.2),
+                              blurRadius: 18,
+                              offset: const Offset(0, 5),
                             ),
                           ],
                         ),
-                        child: const Icon(
-                          Icons.camera_alt_rounded,
-                          size: 14,
-                          color: AppTheme.green,
+                        child: ClipOval(
+                          child: _profileImage != null
+                              ? Image.file(
+                                  _profileImage!,
+                                  fit: BoxFit.cover,
+                                  width: 86,
+                                  height: 86,
+                                )
+                              : const Center(
+                                  child: Text(
+                                    'JD',
+                                    style: TextStyle(
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppTheme.green,
+                                    ),
+                                  ),
+                                ),
                         ),
                       ),
-                    ),
-                  ],
+                      Positioned(
+                        right: 0,
+                        bottom: 0,
+                        child: Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.12),
+                                blurRadius: 6,
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.camera_alt_rounded,
+                            size: 14,
+                            color: AppTheme.green,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 14),
                 const Text(
@@ -134,7 +236,8 @@ class ProfileScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.18),
                     borderRadius: BorderRadius.circular(20),
@@ -174,21 +277,24 @@ class ProfileScreen extends StatelessWidget {
               child: IntrinsicHeight(
                 child: Row(
                   children: [
-                    const Expanded(child: _StatItem(value: '24', label: 'Orders')),
+                    const Expanded(
+                        child: _StatItem(value: '24', label: 'Orders')),
                     VerticalDivider(
                       width: 1,
                       color: AppTheme.border,
                       indent: 8,
                       endIndent: 8,
                     ),
-                    const Expanded(child: _StatItem(value: '\$16.25', label: 'Balance')),
+                    const Expanded(
+                        child: _StatItem(value: '\$16.25', label: 'Balance')),
                     VerticalDivider(
                       width: 1,
                       color: AppTheme.border,
                       indent: 8,
                       endIndent: 8,
                     ),
-                    const Expanded(child: _StatItem(value: '320', label: 'Points')),
+                    const Expanded(
+                        child: _StatItem(value: '320', label: 'Points')),
                   ],
                 ),
               ),
@@ -232,7 +338,8 @@ class ProfileScreen extends StatelessWidget {
                 child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.logout_rounded, color: Color(0xFFE53935), size: 20),
+                    Icon(Icons.logout_rounded,
+                        color: Color(0xFFE53935), size: 20),
                     SizedBox(width: 8),
                     Text(
                       'Log Out',
@@ -286,7 +393,8 @@ class ProfileScreen extends StatelessWidget {
                 ),
               ),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 child: Row(
                   children: [
                     Container(
@@ -371,6 +479,56 @@ class _StatItem extends StatelessWidget {
           style: const TextStyle(fontSize: 12, color: AppTheme.mutedText),
         ),
       ],
+    );
+  }
+}
+
+class _PickerOption extends StatelessWidget {
+  const _PickerOption({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.isDestructive = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool isDestructive;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isDestructive ? const Color(0xFFE53935) : AppTheme.green;
+    final bgColor =
+        isDestructive ? const Color(0xFFFFEBEE) : AppTheme.greenSurface;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: color, size: 22),
+              const SizedBox(width: 14),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
