@@ -27,7 +27,7 @@ class SmartCanteenNavigationBarButton extends StatelessWidget {
       top: false,
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.cardColor,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           boxShadow: [
             BoxShadow(
@@ -70,7 +70,11 @@ class SmartCanteenNavigationBarButton extends StatelessWidget {
                               ),
                             ],
                           ),
-                          child: const Icon(Icons.qr_code_2, color: Colors.white, size: 24),
+                          child: const Icon(
+                            Icons.qr_code_2,
+                            color: Colors.white,
+                            size: 24,
+                          ),
                         ),
                         const SizedBox(height: 3),
                         Text(
@@ -110,7 +114,8 @@ class SmartCanteenNavigationBarButton extends StatelessWidget {
                         child: Icon(
                           _icons[i],
                           size: 22,
-                          color: isSelected ? AppTheme.green : AppTheme.mutedText,
+                          color:
+                              isSelected ? AppTheme.green : context.mutedColor,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -118,8 +123,10 @@ class SmartCanteenNavigationBarButton extends StatelessWidget {
                         _labels[i],
                         style: TextStyle(
                           fontSize: 10,
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                          color: isSelected ? AppTheme.green : AppTheme.mutedText,
+                          fontWeight: isSelected
+                              ? FontWeight.w600
+                              : FontWeight.w400,
+                          color: isSelected ? AppTheme.green : context.mutedColor,
                         ),
                       ),
                       const SizedBox(height: 3),

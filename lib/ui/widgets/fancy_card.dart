@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 
+import '../../theme/app_theme.dart';
+
 class FancyCard extends StatelessWidget {
   const FancyCard({
     super.key,
     required this.child,
     this.padding = const EdgeInsets.all(16),
-    this.backgroundColor = Colors.white,
+    this.backgroundColor,
     this.radius = 18,
   });
 
   final Widget child;
   final EdgeInsets padding;
-  final Color backgroundColor;
+  final Color? backgroundColor;
   final double radius;
 
   @override
@@ -19,7 +21,7 @@ class FancyCard extends StatelessWidget {
     return Container(
       padding: padding,
       decoration: BoxDecoration(
-        color: backgroundColor,
+        color: backgroundColor ?? context.cardColor,
         borderRadius: BorderRadius.circular(radius),
         boxShadow: [
           BoxShadow(

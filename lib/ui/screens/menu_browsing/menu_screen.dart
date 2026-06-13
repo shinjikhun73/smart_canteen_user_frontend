@@ -203,10 +203,10 @@ class FoodItemCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           item.name,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
-                            color: AppTheme.text,
+                            color: context.textColor,
                           ),
                         ),
                       ),
@@ -339,7 +339,7 @@ class _BottomSummaryBar extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardColor,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.06),
@@ -374,7 +374,7 @@ class _BottomSummaryBar extends StatelessWidget {
               decoration: BoxDecoration(
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.15), // shadow color
+                    color: Colors.black.withValues(alpha: 0.15), // shadow color
                     blurRadius: 8, // softness
                     offset: const Offset(0, 4), // position (x, y)
                   ),
@@ -397,7 +397,7 @@ class _BottomSummaryBar extends StatelessWidget {
               decoration: BoxDecoration(
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.15),
+                    color: Colors.black.withValues(alpha: 0.15),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   ),

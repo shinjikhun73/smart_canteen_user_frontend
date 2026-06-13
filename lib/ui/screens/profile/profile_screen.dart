@@ -2,8 +2,10 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 
 import '../../../theme/app_theme.dart';
+import '../../../ui/states/app_settings_state.dart';
 import '../../widgets/smart_canteen_widgets.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -34,7 +36,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _showImageSourceSheet() {
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: context.cardColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -48,17 +50,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppTheme.border,
+                  color: ctx.borderColor,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'Change Profile Photo',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
-                  color: AppTheme.text,
+                  color: ctx.textColor,
                 ),
               ),
               const SizedBox(height: 16),
@@ -102,11 +104,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: context.bgColor,
       body: ListView(
         padding: EdgeInsets.zero,
         children: [
-          // ── Gradient header ───────────────────────────────────────────────
+          // ── Gradient header ─────────────────────────────────────────────
           Container(
             padding: EdgeInsets.fromLTRB(
               20,
@@ -117,7 +119,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             decoration: BoxDecoration(gradient: AppTheme.headerGradient),
             child: Column(
               children: [
-                // Top bar
                 Row(
                   children: [
                     const Text(
@@ -154,7 +155,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ],
                 ),
                 const SizedBox(height: 24),
-                // Avatar with camera button
                 GestureDetector(
                   onTap: _showImageSourceSheet,
                   child: Stack(
@@ -236,8 +236,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 12),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 6),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.18),
                     borderRadius: BorderRadius.circular(20),
@@ -258,13 +258,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
 
-          // ── Stats card ────────────────────────────────────────────────────
+          // ── Stats card ──────────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 20),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: context.cardColor,
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
@@ -277,23 +277,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: IntrinsicHeight(
                 child: Row(
                   children: [
-                    const Expanded(
+                    Expanded(
                         child: _StatItem(value: '24', label: 'Orders')),
                     VerticalDivider(
                       width: 1,
-                      color: AppTheme.border,
+                      color: context.borderColor,
                       indent: 8,
                       endIndent: 8,
                     ),
-                    const Expanded(
-                        child: _StatItem(value: '\$16.25', label: 'Balance')),
+                    Expanded(
+                        child:
+                            _StatItem(value: '\$16.25', label: 'Balance')),
                     VerticalDivider(
                       width: 1,
-                      color: AppTheme.border,
+                      color: context.borderColor,
                       indent: 8,
                       endIndent: 8,
                     ),
-                    const Expanded(
+                    Expanded(
                         child: _StatItem(value: '320', label: 'Points')),
                   ],
                 ),
@@ -301,12 +302,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
 
-          // ── Menu items card ───────────────────────────────────────────────
+          // ── Menu items card ─────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: context.cardColor,
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
@@ -322,12 +323,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
 
-          // ── Logout button ─────────────────────────────────────────────────
+          // ── Logout button ───────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
             child: GestureDetector(
-              onTap: () =>
-                  Navigator.pushNamedAndRemoveUntil(context, '/', (_) => false),
+              onTap: () => Navigator.pushNamedAndRemoveUntil(
+                  context, '/', (_) => false),
               child: Container(
                 height: 52,
                 decoration: BoxDecoration(
@@ -364,92 +365,176 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   List<Widget> _buildMenuItems(BuildContext context) {
-    final items = [
+    final settings = context.watch<AppSettingsState>();
+
+    final staticItems = [
       (Icons.edit_outlined, 'Edit Profile', 'Update your info'),
       (Icons.credit_card_outlined, 'Payment Methods', 'Manage your cards'),
       (Icons.history, 'Order History', 'View past orders'),
       (Icons.notifications_outlined, 'Notifications', 'Set your preferences'),
-      (Icons.info_outline, 'About', 'App info & version'),
     ];
 
-    return List.generate(items.length, (i) {
-      final item = items[i];
-      final isLast = i == items.length - 1;
+    final rows = <Widget>[];
 
-      return Column(
-        children: [
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.vertical(
-                top: i == 0 ? const Radius.circular(20) : Radius.zero,
-                bottom: isLast ? const Radius.circular(20) : Radius.zero,
-              ),
-              onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${item.$2} — coming soon'),
-                  behavior: SnackBarBehavior.floating,
-                  backgroundColor: AppTheme.green,
+    for (var i = 0; i < staticItems.length; i++) {
+      final item = staticItems[i];
+      rows.add(_menuRow(
+        context: context,
+        icon: item.$1,
+        title: item.$2,
+        subtitle: item.$3,
+        isFirst: i == 0,
+        isLast: false,
+        onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${item.$2} — coming soon'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppTheme.green,
+          ),
+        ),
+      ));
+      rows.add(Divider(
+          indent: 70, endIndent: 16, height: 1, color: context.borderColor));
+    }
+
+    // Dark mode toggle row
+    rows.add(_darkModeRow(context, settings));
+    rows.add(Divider(
+        indent: 70, endIndent: 16, height: 1, color: context.borderColor));
+
+    // About row
+    rows.add(_menuRow(
+      context: context,
+      icon: Icons.info_outline,
+      title: 'About',
+      subtitle: 'App info & version',
+      isFirst: false,
+      isLast: true,
+      onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('About — coming soon'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppTheme.green,
+        ),
+      ),
+    ));
+
+    return rows;
+  }
+
+  Widget _menuRow({
+    required BuildContext context,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required bool isFirst,
+    required bool isLast,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.vertical(
+          top: isFirst ? const Radius.circular(20) : Radius.zero,
+          bottom: isLast ? const Radius.circular(20) : Radius.zero,
+        ),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: context.surfaceColor,
+                  borderRadius: BorderRadius.circular(12),
                 ),
+                child: Icon(icon, color: AppTheme.green, size: 20),
               ),
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                child: Row(
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: AppTheme.greenSurface,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(item.$1, color: AppTheme.green, size: 20),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item.$2,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.text,
-                              fontSize: 14,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            item.$3,
-                            style: const TextStyle(
-                              color: AppTheme.mutedText,
-                              fontSize: 11,
-                            ),
-                          ),
-                        ],
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: context.textColor,
+                        fontSize: 14,
                       ),
                     ),
-                    const Icon(
-                      Icons.arrow_forward_ios_rounded,
-                      size: 13,
-                      color: AppTheme.mutedText,
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        color: context.mutedColor,
+                        fontSize: 11,
+                      ),
                     ),
                   ],
                 ),
               ),
+              Icon(Icons.arrow_forward_ios_rounded,
+                  size: 13, color: context.mutedColor),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _darkModeRow(BuildContext context, AppSettingsState settings) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: context.surfaceColor,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              settings.isDarkMode
+                  ? Icons.dark_mode_rounded
+                  : Icons.light_mode_rounded,
+              color: AppTheme.green,
+              size: 20,
             ),
           ),
-          if (!isLast)
-            const Divider(
-              indent: 70,
-              endIndent: 16,
-              height: 1,
-              color: AppTheme.border,
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Dark Mode',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: context.textColor,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  settings.isDarkMode ? 'Currently on' : 'Currently off',
+                  style: TextStyle(color: context.mutedColor, fontSize: 11),
+                ),
+              ],
             ),
+          ),
+          Switch(
+            value: settings.isDarkMode,
+            onChanged: (_) => settings.toggleDarkMode(),
+            activeThumbColor: AppTheme.green,
+            activeTrackColor: AppTheme.greenSurface,
+          ),
         ],
-      );
-    });
+      ),
+    );
   }
 }
 
@@ -476,7 +561,7 @@ class _StatItem extends StatelessWidget {
         const SizedBox(height: 5),
         Text(
           label,
-          style: const TextStyle(fontSize: 12, color: AppTheme.mutedText),
+          style: TextStyle(fontSize: 12, color: context.mutedColor),
         ),
       ],
     );
@@ -500,7 +585,7 @@ class _PickerOption extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = isDestructive ? const Color(0xFFE53935) : AppTheme.green;
     final bgColor =
-        isDestructive ? const Color(0xFFFFEBEE) : AppTheme.greenSurface;
+        isDestructive ? const Color(0xFFFFEBEE) : context.surfaceColor;
 
     return Material(
       color: Colors.transparent,

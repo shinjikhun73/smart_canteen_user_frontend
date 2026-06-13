@@ -49,7 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final cart = CartProvider.of(context);
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: context.bgColor,
       body: SafeArea(
         child: ListView(
           padding: EdgeInsets.zero,
@@ -72,7 +72,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 24),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: const _SectionHeader(title: 'Meal Passes'),
+              child: _SectionHeader(title: 'Meal Passes'),
             ),
             const SizedBox(height: 12),
             Padding(
@@ -112,7 +112,8 @@ class _HomeScreenState extends State<HomeScreen> {
               child: _SectionHeader(
                 title: "Today's Menu",
                 actionLabel: 'View all',
-                onAction: () => Navigator.pushReplacementNamed(context, '/menu'),
+                onAction: () =>
+                    Navigator.pushReplacementNamed(context, '/menu'),
               ),
             ),
             const SizedBox(height: 12),
@@ -123,16 +124,21 @@ class _HomeScreenState extends State<HomeScreen> {
                 scrollDirection: Axis.horizontal,
                 itemCount: _filterLabels.length,
                 separatorBuilder: (_, _) => const SizedBox(width: 8),
-                itemBuilder: (_, i) => GestureDetector(
+                itemBuilder: (ctx, i) => GestureDetector(
                   onTap: () => setState(() => _selectedFilter = i),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 18, vertical: 8),
                     decoration: BoxDecoration(
-                      color: _selectedFilter == i ? AppTheme.green : Colors.white,
+                      color: _selectedFilter == i
+                          ? AppTheme.green
+                          : ctx.cardColor,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: _selectedFilter == i ? AppTheme.green : AppTheme.border,
+                        color: _selectedFilter == i
+                            ? AppTheme.green
+                            : ctx.borderColor,
                       ),
                       boxShadow: _selectedFilter == i
                           ? [
@@ -149,7 +155,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: _selectedFilter == i ? Colors.white : AppTheme.mutedText,
+                        color: _selectedFilter == i
+                            ? Colors.white
+                            : ctx.mutedColor,
                       ),
                     ),
                   ),
@@ -250,17 +258,14 @@ class _Header extends StatelessWidget {
               children: [
                 Text(
                   greeting,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.mutedText,
-                  ),
+                  style: TextStyle(fontSize: 12, color: context.mutedColor),
                 ),
-                const Text(
+                Text(
                   'John Doe',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
-                    color: AppTheme.text,
+                    color: context.textColor,
                   ),
                 ),
               ],
@@ -271,7 +276,8 @@ class _Header extends StatelessWidget {
           Stack(
             clipBehavior: Clip.none,
             children: [
-              _ActionIcon(icon: Icons.shopping_bag_outlined, onTap: onCartTap),
+              _ActionIcon(
+                  icon: Icons.shopping_bag_outlined, onTap: onCartTap),
               if (cartCount > 0)
                 Positioned(
                   right: 2,
@@ -316,7 +322,7 @@ class _ActionIcon extends StatelessWidget {
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.cardColor,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
@@ -326,7 +332,7 @@ class _ActionIcon extends StatelessWidget {
             ),
           ],
         ),
-        child: Icon(icon, size: 20, color: AppTheme.text),
+        child: Icon(icon, size: 20, color: context.textColor),
       ),
     );
   }
@@ -345,19 +351,19 @@ class _SectionHeader extends StatelessWidget {
       children: [
         Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w700,
-            color: AppTheme.text,
+            color: context.textColor,
           ),
         ),
         const Spacer(),
         if (actionLabel != null && onAction != null)
           GestureDetector(
             onTap: onAction,
-            child: Text(
-              actionLabel!,
-              style: const TextStyle(
+            child: const Text(
+              'View all',
+              style: TextStyle(
                 fontSize: 13,
                 color: AppTheme.green,
                 fontWeight: FontWeight.w600,
@@ -424,7 +430,6 @@ class _BalanceCard extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Top row: wallet icon + label + active badge
               Row(
                 children: [
                   Container(
@@ -454,13 +459,15 @@ class _BalanceCard extends StatelessWidget {
                       ),
                       Text(
                         'CADT Scholar',
-                        style: TextStyle(color: Colors.white60, fontSize: 11),
+                        style:
+                            TextStyle(color: Colors.white60, fontSize: 11),
                       ),
                     ],
                   ),
                   const Spacer(),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(20),
@@ -468,7 +475,8 @@ class _BalanceCard extends StatelessWidget {
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.circle, color: Color(0xFF69F0AE), size: 7),
+                        Icon(Icons.circle,
+                            color: Color(0xFF69F0AE), size: 7),
                         SizedBox(width: 5),
                         Text(
                           'Active',
@@ -484,7 +492,6 @@ class _BalanceCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 22),
-              // Balance amount
               const Text(
                 '៛65,000',
                 style: TextStyle(
@@ -500,7 +507,6 @@ class _BalanceCard extends StatelessWidget {
                 style: TextStyle(color: Colors.white60, fontSize: 13),
               ),
               const SizedBox(height: 22),
-              // Action buttons
               Row(
                 children: [
                   Expanded(
@@ -559,9 +565,13 @@ class _BalanceBtn extends StatelessWidget {
       child: Container(
         height: 44,
         decoration: BoxDecoration(
-          color: isPrimary ? Colors.white : Colors.white.withValues(alpha: 0.13),
+          color: isPrimary
+              ? Colors.white
+              : Colors.white.withValues(alpha: 0.13),
           borderRadius: BorderRadius.circular(12),
-          border: isPrimary ? null : Border.all(color: Colors.white.withValues(alpha: 0.3)),
+          border: isPrimary
+              ? null
+              : Border.all(color: Colors.white.withValues(alpha: 0.3)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -577,7 +587,8 @@ class _BalanceBtn extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: isPrimary ? const Color(0xFF2E7D32) : Colors.white,
+                color:
+                    isPrimary ? const Color(0xFF2E7D32) : Colors.white,
               ),
             ),
           ],
@@ -609,7 +620,7 @@ class _MealPassCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: isActive ? AppTheme.green : Colors.white,
+          color: isActive ? AppTheme.green : context.cardColor,
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
@@ -632,7 +643,7 @@ class _MealPassCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: isActive
                         ? Colors.white.withValues(alpha: 0.2)
-                        : AppTheme.greenSurface,
+                        : context.surfaceColor,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
@@ -645,7 +656,7 @@ class _MealPassCard extends StatelessWidget {
                 Icon(
                   Icons.qr_code_2,
                   size: 18,
-                  color: isActive ? Colors.white60 : AppTheme.mutedText,
+                  color: isActive ? Colors.white60 : context.mutedColor,
                 ),
               ],
             ),
@@ -655,7 +666,7 @@ class _MealPassCard extends StatelessWidget {
               style: TextStyle(
                 fontWeight: FontWeight.w700,
                 fontSize: 14,
-                color: isActive ? Colors.white : AppTheme.text,
+                color: isActive ? Colors.white : context.textColor,
               ),
             ),
             const SizedBox(height: 3),
@@ -663,16 +674,17 @@ class _MealPassCard extends StatelessWidget {
               time,
               style: TextStyle(
                 fontSize: 11,
-                color: isActive ? Colors.white70 : AppTheme.mutedText,
+                color: isActive ? Colors.white70 : context.mutedColor,
               ),
             ),
             const SizedBox(height: 10),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
                 color: isActive
                     ? Colors.white.withValues(alpha: 0.2)
-                    : AppTheme.border,
+                    : context.borderColor,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
@@ -680,7 +692,7 @@ class _MealPassCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.w600,
-                  color: isActive ? Colors.white : AppTheme.mutedText,
+                  color: isActive ? Colors.white : context.mutedColor,
                 ),
               ),
             ),
@@ -721,7 +733,8 @@ class _PromoBanner extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(6),
@@ -765,7 +778,8 @@ class _PromoBanner extends StatelessWidget {
                     ),
                   ),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 9),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(10),
@@ -815,7 +829,7 @@ class _FoodCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardColor,
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
@@ -830,7 +844,8 @@ class _FoodCard extends StatelessWidget {
         children: [
           Expanded(
             child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(18)),
               child: _FoodThumbnail(item: item),
             ),
           ),
@@ -843,20 +858,22 @@ class _FoodCard extends StatelessWidget {
                   item.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 13,
-                    color: AppTheme.text,
+                    color: context.textColor,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    const Icon(Icons.star_rounded, color: Color(0xFFFFA726), size: 13),
+                    const Icon(Icons.star_rounded,
+                        color: Color(0xFFFFA726), size: 13),
                     const SizedBox(width: 3),
                     Text(
                       item.rating.toStringAsFixed(1),
-                      style: const TextStyle(color: AppTheme.mutedText, fontSize: 11),
+                      style: TextStyle(
+                          color: context.mutedColor, fontSize: 11),
                     ),
                     const Spacer(),
                     Text(
@@ -881,7 +898,8 @@ class _FoodCard extends StatelessWidget {
                     child: const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.add_shopping_cart_rounded, color: Colors.white, size: 13),
+                        Icon(Icons.add_shopping_cart_rounded,
+                            color: Colors.white, size: 13),
                         SizedBox(width: 5),
                         Text(
                           'Add',
@@ -936,7 +954,8 @@ class _FoodThumbnail extends StatelessWidget {
         ),
       ),
       child: Center(
-        child: Icon(kFoodIcons[idx % kFoodIcons.length], color: AppTheme.green, size: 52),
+        child: Icon(kFoodIcons[idx % kFoodIcons.length],
+            color: AppTheme.green, size: 52),
       ),
     );
   }
@@ -950,9 +969,10 @@ class _TopUpSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      decoration: BoxDecoration(
+        color: context.cardColor,
+        borderRadius:
+            const BorderRadius.vertical(top: Radius.circular(28)),
       ),
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
       child: Column(
@@ -963,23 +983,23 @@ class _TopUpSheet extends StatelessWidget {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: AppTheme.border,
+              color: context.borderColor,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
           const SizedBox(height: 20),
-          const Text(
+          Text(
             'Top Up Balance',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
-              color: AppTheme.text,
+              color: context.textColor,
             ),
           ),
           const SizedBox(height: 6),
-          const Text(
+          Text(
             'Select an amount to add to your wallet',
-            style: TextStyle(color: AppTheme.mutedText, fontSize: 13),
+            style: TextStyle(color: context.mutedColor, fontSize: 13),
           ),
           const SizedBox(height: 24),
           GridView.count(
@@ -1003,9 +1023,9 @@ class _TopUpSheet extends StatelessWidget {
                 },
                 child: Container(
                   decoration: BoxDecoration(
-                    color: AppTheme.greenSurface,
+                    color: context.surfaceColor,
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppTheme.border),
+                    border: Border.all(color: context.borderColor),
                   ),
                   alignment: Alignment.center,
                   child: Text(

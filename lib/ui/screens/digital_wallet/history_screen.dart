@@ -9,18 +9,46 @@ class HistoryScreen extends StatelessWidget {
   static const routeName = '/history';
 
   static const _orders = [
-    _OrderRecord(date: 'Today, 11:45 AM', items: 'Pork with Rice, Coconut Milk Tea', total: 2.75, status: 'Completed'),
-    _OrderRecord(date: 'Yesterday, 7:30 AM', items: 'Khmer Noodle', total: 2.00, status: 'Completed'),
-    _OrderRecord(date: 'Jun 9, 12:00 PM', items: 'Chicken with Rice, Sugarcane Juice', total: 2.75, status: 'Completed'),
-    _OrderRecord(date: 'Jun 8, 7:15 AM', items: 'Bai Sach Chrouk', total: 1.50, status: 'Completed'),
-    _OrderRecord(date: 'Jun 7, 11:30 AM', items: 'Beef Lok Lak, Coconut Milk Tea', total: 4.00, status: 'Completed'),
+    _OrderRecord(
+      date: 'Today, 11:45 AM',
+      items: 'Pork with Rice, Coconut Milk Tea',
+      total: 2.75,
+      status: 'Completed',
+    ),
+    _OrderRecord(
+      date: 'Yesterday, 7:30 AM',
+      items: 'Khmer Noodle',
+      total: 2.00,
+      status: 'Completed',
+    ),
+    _OrderRecord(
+      date: 'Jun 9, 12:00 PM',
+      items: 'Chicken with Rice, Sugarcane Juice',
+      total: 2.75,
+      status: 'Completed',
+    ),
+    _OrderRecord(
+      date: 'Jun 8, 7:15 AM',
+      items: 'Bai Sach Chrouk',
+      total: 1.50,
+      status: 'Completed',
+    ),
+    _OrderRecord(
+      date: 'Jun 7, 11:30 AM',
+      items: 'Beef Lok Lak, Coconut Milk Tea',
+      total: 4.00,
+      status: 'Completed',
+    ),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Order History', style: TextStyle(fontWeight: FontWeight.w700)),
+        title: const Text(
+          'Order History',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
       ),
       body: ListView.separated(
         padding: const EdgeInsets.all(16),
@@ -67,7 +95,11 @@ class _OrderCard extends StatelessWidget {
               color: AppTheme.green.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.receipt_long_outlined, color: AppTheme.green, size: 22),
+            child: const Icon(
+              Icons.receipt_long_outlined,
+              color: AppTheme.green,
+              size: 22,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -81,13 +113,15 @@ class _OrderCard extends StatelessWidget {
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
-                    color: AppTheme.text,
                   ),
                 ),
                 const SizedBox(height: 3),
                 Text(
                   order.date,
-                  style: const TextStyle(fontSize: 11, color: AppTheme.mutedText),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppTheme.mutedText,
+                  ),
                 ),
               ],
             ),
@@ -113,7 +147,11 @@ class _OrderCard extends StatelessWidget {
                 ),
                 child: const Text(
                   'Completed',
-                  style: TextStyle(fontSize: 10, color: AppTheme.green, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: AppTheme.green,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
@@ -126,10 +164,15 @@ class _OrderCard extends StatelessWidget {
 
 void _onNavTap(BuildContext context, int index) {
   switch (index) {
-    case 0: Navigator.pushReplacementNamed(context, '/home');
-    case 1: Navigator.pushReplacementNamed(context, '/menu');
-    case 2: Navigator.pushReplacementNamed(context, '/qr');
-    case 3: break;
-    case 4: Navigator.pushReplacementNamed(context, '/profile');
+    case 0:
+      Navigator.pushReplacementNamed(context, '/home');
+    case 1:
+      Navigator.pushReplacementNamed(context, '/menu');
+    case 2:
+      Navigator.pushReplacementNamed(context, '/qr');
+    case 3:
+      break;
+    case 4:
+      Navigator.pushReplacementNamed(context, '/profile');
   }
 }

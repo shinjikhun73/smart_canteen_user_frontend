@@ -28,16 +28,12 @@ class QrScreen extends StatelessWidget {
                 children: [
                   const Text(
                     'John Doe',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.text,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 4),
                   const Text(
                     'CADT Scholar · Student ID: 20230042',
-                    style: TextStyle(fontSize: 12, color: AppTheme.mutedText),
+                    style: TextStyle(fontSize: 12),
                   ),
                   const SizedBox(height: 24),
                   Container(
@@ -54,11 +50,7 @@ class QrScreen extends StatelessWidget {
                   const Text(
                     'Scan this code at the canteen counter\nto get your meal',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppTheme.mutedText,
-                      height: 1.5,
-                    ),
+                    style: TextStyle(fontSize: 12, height: 1.5),
                   ),
                 ],
               ),

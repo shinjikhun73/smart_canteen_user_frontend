@@ -65,37 +65,48 @@ class _SmartCanteenAppState extends State<SmartCanteenApp> {
 
         // Global states
         ChangeNotifierProvider(create: (_) => AppSettingsState()),
-        ChangeNotifierProvider(create: (_) => BalanceState(widget.walletRepository)),
-        ChangeNotifierProvider(create: (_) => ActiveCouponState(widget.couponRepository)),
+        ChangeNotifierProvider(
+            create: (_) => BalanceState(widget.walletRepository)),
+        ChangeNotifierProvider(
+            create: (_) => ActiveCouponState(widget.couponRepository)),
 
         // Screen view models
-        ChangeNotifierProvider(create: (_) => AuthViewModel(widget.authRepository)),
-        ChangeNotifierProvider(create: (_) => MenuViewModel(widget.menuRepository)),
-        ChangeNotifierProvider(create: (_) => PurchaseViewModel(widget.couponRepository)),
         ChangeNotifierProvider(
-          create: (_) => WalletViewModel(widget.walletRepository, widget.couponRepository),
+            create: (_) => AuthViewModel(widget.authRepository)),
+        ChangeNotifierProvider(
+            create: (_) => MenuViewModel(widget.menuRepository)),
+        ChangeNotifierProvider(
+            create: (_) => PurchaseViewModel(widget.couponRepository)),
+        ChangeNotifierProvider(
+          create: (_) =>
+              WalletViewModel(widget.walletRepository, widget.couponRepository),
         ),
         ChangeNotifierProvider(create: (_) => NotificationViewModel()),
       ],
       child: CartProvider(
         cart: _cart,
-        child: MaterialApp(
-          debugShowCheckedModeBanner: false,
-          title: 'Smart Canteen',
-          theme: AppTheme.lightTheme,
-          initialRoute: SplashScreen.routeName,
-          routes: {
-            SplashScreen.routeName:         (_) => const SplashScreen(),
-            SignInScreen.routeName:          (_) => const SignInScreen(),
-            SignUpScreen.routeName:          (_) => const SignUpScreen(),
-            HomeScreen.routeName:            (_) => const HomeScreen(),
-            MenuScreen.routeName:            (_) => const MenuScreen(),
-            OrderSummaryScreen.routeName:    (_) => const OrderSummaryScreen(),
-            QrScreen.routeName:              (_) => const QrScreen(),
-            HistoryScreen.routeName:         (_) => const HistoryScreen(),
-            ProfileScreen.routeName:         (_) => const ProfileScreen(),
-            NotificationScreen.routeName:    (_) => const NotificationScreen(),
-          },
+        child: Consumer<AppSettingsState>(
+          builder: (_, settings, _) => MaterialApp(
+            debugShowCheckedModeBanner: false,
+            title: 'Smart Canteen',
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode:
+                settings.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+            initialRoute: SplashScreen.routeName,
+            routes: {
+              SplashScreen.routeName: (_) => const SplashScreen(),
+              SignInScreen.routeName: (_) => const SignInScreen(),
+              SignUpScreen.routeName: (_) => const SignUpScreen(),
+              HomeScreen.routeName: (_) => const HomeScreen(),
+              MenuScreen.routeName: (_) => const MenuScreen(),
+              OrderSummaryScreen.routeName: (_) => const OrderSummaryScreen(),
+              QrScreen.routeName: (_) => const QrScreen(),
+              HistoryScreen.routeName: (_) => const HistoryScreen(),
+              ProfileScreen.routeName: (_) => const ProfileScreen(),
+              NotificationScreen.routeName: (_) => const NotificationScreen(),
+            },
+          ),
         ),
       ),
     );
