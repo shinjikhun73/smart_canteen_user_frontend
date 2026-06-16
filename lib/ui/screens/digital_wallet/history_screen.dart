@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../models/food_item.dart';
 import '../../../theme/app_theme.dart';
 import '../../../ui/states/order_history_state.dart';
 import '../../widgets/smart_canteen_widgets.dart';
@@ -56,37 +57,35 @@ class _OrderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDeposit = order.type == 'deposit';
     final isPending = order.status == 'Pending';
 
-    // Colour scheme per status
     final statusBg = isPending
-        ? const Color(0xFFFFF8E1)  // amber tint
-        : const Color(0xFFE8F5E9); // green tint
-    final statusFg = isPending
-        ? const Color(0xFFF9A825)  // amber
-        : AppTheme.green;
-    final iconBg = isPending
         ? const Color(0xFFFFF8E1)
-        : AppTheme.green.withValues(alpha: 0.1);
-    final iconFg = isPending ? const Color(0xFFF9A825) : AppTheme.green;
+        : const Color(0xFFE8F5E9);
+    final statusFg = isPending
+        ? const Color(0xFFF9A825)
+        : AppTheme.green;
+
+    final amountColor =
+        isDeposit ? AppTheme.green : const Color(0xFFE53935);
+    final amountLabel = isDeposit
+        ? '+\$${order.total.toStringAsFixed(2)}'
+        : '-\$${order.total.toStringAsFixed(2)}';
 
     return FancyCard(
       padding: const EdgeInsets.all(14),
       child: Row(
         children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: iconBg,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              isPending
-                  ? Icons.hourglass_top_rounded
-                  : Icons.receipt_long_outlined,
-              color: iconFg,
-              size: 22,
+          // Thumbnail
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: SizedBox(
+              width: 52,
+              height: 52,
+              child: isDeposit
+                  ? const _DepositThumbnail()
+                  : _FoodThumbnail(order: order),
             ),
           ),
           const SizedBox(width: 12),
@@ -119,11 +118,11 @@ class _OrderCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '\$${order.total.toStringAsFixed(2)}',
-                style: const TextStyle(
+                amountLabel,
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
-                  color: AppTheme.green,
+                  color: amountColor,
                 ),
               ),
               const SizedBox(height: 4),
@@ -146,6 +145,61 @@ class _OrderCard extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _FoodThumbnail extends StatelessWidget {
+  const _FoodThumbnail({required this.order});
+  final OrderRecord order;
+
+  @override
+  Widget build(BuildContext context) {
+    if (order.imagePath != null) {
+      return Image.asset(
+        order.imagePath!,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => _placeholder(),
+      );
+    }
+    return _placeholder();
+  }
+
+  Widget _placeholder() {
+    final idx = order.colorSeed % kFoodGradients.length;
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: kFoodGradients[idx],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Center(
+        child: Icon(
+          kFoodIcons[idx % kFoodIcons.length],
+          color: AppTheme.green,
+          size: 22,
+        ),
+      ),
+    );
+  }
+}
+
+class _DepositThumbnail extends StatelessWidget {
+  const _DepositThumbnail();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: AppTheme.green.withValues(alpha: 0.12),
+      child: const Center(
+        child: Icon(
+          Icons.account_balance_wallet_rounded,
+          color: AppTheme.green,
+          size: 26,
+        ),
       ),
     );
   }

@@ -75,12 +75,16 @@ class OrderSummaryScreen extends StatelessWidget {
                         : e.item.name)
                     .join(', ');
                 // Push the new order into history as Pending
+                final firstEntry =
+                    cart.entries.isNotEmpty ? cart.entries.first : null;
                 context.read<OrderHistoryState>().addOrder(
                       OrderRecord(
                         date: _formatNow(),
                         items: itemsLabel,
                         total: cart.total,
                         status: 'Pending',
+                        imagePath: firstEntry?.item.imagePath,
+                        colorSeed: firstEntry?.item.colorSeed ?? 0,
                       ),
                     );
                 cart.clear();
