@@ -1,14 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../../models/cart_model.dart';
 import '../../../models/food_item.dart';
 import '../../../theme/app_theme.dart';
+import '../../../ui/states/order_history_state.dart';
+import '../../widgets/payment_method_sheet.dart';
 import '../../widgets/smart_canteen_widgets.dart';
 
 class OrderSummaryScreen extends StatelessWidget {
   const OrderSummaryScreen({super.key});
 
   static const routeName = '/order-summary';
+
+  void _showPaymentMethodSheet(BuildContext context, double amount) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => PaymentMethodSheet(
+        totalAmount: amount,
+        onConfirm: () => _showPaymentSuccess(context),
+      ),
+    );
+  }
 
   void _showPaymentSuccess(BuildContext context) {
     showDialog<void>(
@@ -51,11 +66,30 @@ class OrderSummaryScreen extends StatelessWidget {
             const SizedBox(height: 24),
             SmartCanteenButton(
               label: 'Back to Home',
-              onPressed: () => Navigator.pushNamedAndRemoveUntil(
-                context,
-                '/home',
-                (_) => false,
-              ),
+              onPressed: () {
+                final cart = CartProvider.of(context);
+                // Build a summary string from the current cart entries
+                final itemsLabel = cart.entries
+                    .map((e) => e.quantity > 1
+                        ? '${e.item.name} ×${e.quantity}'
+                        : e.item.name)
+                    .join(', ');
+                // Push the new order into history as Pending
+                context.read<OrderHistoryState>().addOrder(
+                      OrderRecord(
+                        date: _formatNow(),
+                        items: itemsLabel,
+                        total: cart.total,
+                        status: 'Pending',
+                      ),
+                    );
+                cart.clear();
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  '/home',
+                  (_) => false,
+                );
+              },
             ),
           ],
         ),
@@ -169,7 +203,7 @@ class OrderSummaryScreen extends StatelessWidget {
                 ),
                 _PaymentSummarySection(
                   cart: cart,
-                  onPay: () => _showPaymentSuccess(context),
+                  onPay: () => _showPaymentMethodSheet(context, cart.total),
                 ),
               ],
             ),
@@ -463,4 +497,13 @@ class _SummaryRow extends StatelessWidget {
       ],
     );
   }
+}
+
+// Returns a human-readable timestamp such as "Today, 2:05 PM".
+String _formatNow() {
+  final dt = DateTime.now();
+  final h = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
+  final m = dt.minute.toString().padLeft(2, '0');
+  final period = dt.hour >= 12 ? 'PM' : 'AM';
+  return 'Today, $h:$m $period';
 }

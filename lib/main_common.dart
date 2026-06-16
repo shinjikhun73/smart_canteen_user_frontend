@@ -25,6 +25,7 @@ import 'ui/screens/splash/splash_screen.dart';
 import 'ui/states/active_coupon_state.dart';
 import 'ui/states/app_settings_state.dart';
 import 'ui/states/balance_state.dart';
+import 'ui/states/order_history_state.dart';
 
 class SmartCanteenApp extends StatefulWidget {
   const SmartCanteenApp({
@@ -65,6 +66,7 @@ class _SmartCanteenAppState extends State<SmartCanteenApp> {
 
         // Global states
         ChangeNotifierProvider(create: (_) => AppSettingsState()),
+        ChangeNotifierProvider(create: (_) => OrderHistoryState()),
         ChangeNotifierProvider(
             create: (_) => BalanceState(widget.walletRepository)),
         ChangeNotifierProvider(

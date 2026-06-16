@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../../theme/app_theme.dart';
+import '../../../ui/states/order_history_state.dart';
 import '../../widgets/smart_canteen_widgets.dart';
 
 class HistoryScreen extends StatelessWidget {
@@ -8,41 +10,10 @@ class HistoryScreen extends StatelessWidget {
 
   static const routeName = '/history';
 
-  static const _orders = [
-    _OrderRecord(
-      date: 'Today, 11:45 AM',
-      items: 'Pork with Rice, Coconut Milk Tea',
-      total: 2.75,
-      status: 'Completed',
-    ),
-    _OrderRecord(
-      date: 'Yesterday, 7:30 AM',
-      items: 'Khmer Noodle',
-      total: 2.00,
-      status: 'Completed',
-    ),
-    _OrderRecord(
-      date: 'Jun 9, 12:00 PM',
-      items: 'Chicken with Rice, Sugarcane Juice',
-      total: 2.75,
-      status: 'Completed',
-    ),
-    _OrderRecord(
-      date: 'Jun 8, 7:15 AM',
-      items: 'Bai Sach Chrouk',
-      total: 1.50,
-      status: 'Completed',
-    ),
-    _OrderRecord(
-      date: 'Jun 7, 11:30 AM',
-      items: 'Beef Lok Lak, Coconut Milk Tea',
-      total: 4.00,
-      status: 'Completed',
-    ),
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final orders = context.watch<OrderHistoryState>().orders;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -50,36 +21,55 @@ class HistoryScreen extends StatelessWidget {
           style: TextStyle(fontWeight: FontWeight.w700),
         ),
       ),
-      body: ListView.separated(
-        padding: const EdgeInsets.all(16),
-        itemCount: _orders.length,
-        separatorBuilder: (_, _) => const SizedBox(height: 12),
-        itemBuilder: (_, i) => _OrderCard(order: _orders[i]),
-      ),
+      body: orders.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.receipt_long_outlined,
+                      size: 56, color: context.borderColor),
+                  const SizedBox(height: 12),
+                  Text(
+                    'No orders yet',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: context.mutedColor,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : ListView.separated(
+              padding: const EdgeInsets.all(16),
+              itemCount: orders.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 12),
+              itemBuilder: (_, i) => _OrderCard(order: orders[i]),
+            ),
     );
   }
 }
 
-class _OrderRecord {
-  final String date;
-  final String items;
-  final double total;
-  final String status;
-
-  const _OrderRecord({
-    required this.date,
-    required this.items,
-    required this.total,
-    required this.status,
-  });
-}
-
 class _OrderCard extends StatelessWidget {
   const _OrderCard({required this.order});
-  final _OrderRecord order;
+  final OrderRecord order;
 
   @override
   Widget build(BuildContext context) {
+    final isPending = order.status == 'Pending';
+
+    // Colour scheme per status
+    final statusBg = isPending
+        ? const Color(0xFFFFF8E1)  // amber tint
+        : const Color(0xFFE8F5E9); // green tint
+    final statusFg = isPending
+        ? const Color(0xFFF9A825)  // amber
+        : AppTheme.green;
+    final iconBg = isPending
+        ? const Color(0xFFFFF8E1)
+        : AppTheme.green.withValues(alpha: 0.1);
+    final iconFg = isPending ? const Color(0xFFF9A825) : AppTheme.green;
+
     return FancyCard(
       padding: const EdgeInsets.all(14),
       child: Row(
@@ -88,12 +78,14 @@ class _OrderCard extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: AppTheme.green.withValues(alpha: 0.1),
+              color: iconBg,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(
-              Icons.receipt_long_outlined,
-              color: AppTheme.green,
+            child: Icon(
+              isPending
+                  ? Icons.hourglass_top_rounded
+                  : Icons.receipt_long_outlined,
+              color: iconFg,
               size: 22,
             ),
           ),
@@ -134,19 +126,20 @@ class _OrderCard extends StatelessWidget {
                   color: AppTheme.green,
                 ),
               ),
-              const SizedBox(height: 3),
+              const SizedBox(height: 4),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE8F5E9),
+                  color: statusBg,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Text(
-                  'Completed',
+                child: Text(
+                  order.status,
                   style: TextStyle(
                     fontSize: 10,
-                    color: AppTheme.green,
-                    fontWeight: FontWeight.w600,
+                    color: statusFg,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
@@ -157,4 +150,3 @@ class _OrderCard extends StatelessWidget {
     );
   }
 }
-

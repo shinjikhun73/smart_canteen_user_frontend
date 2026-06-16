@@ -55,6 +55,11 @@ class CartModel extends ChangeNotifier {
     }
   }
 
+  void clear() {
+    _entries.clear();
+    notifyListeners();
+  }
+
   int quantityOf(String id) {
     final idx = _entries.indexWhere((e) => e.item.id == id);
     return idx >= 0 ? _entries[idx].quantity : 0;
