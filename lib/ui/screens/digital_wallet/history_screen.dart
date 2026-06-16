@@ -56,10 +56,6 @@ class HistoryScreen extends StatelessWidget {
         separatorBuilder: (_, _) => const SizedBox(height: 12),
         itemBuilder: (_, i) => _OrderCard(order: _orders[i]),
       ),
-      bottomNavigationBar: SmartCanteenNavigationBarButton(
-        currentIndex: 3,
-        onTap: (i) => _onNavTap(context, i),
-      ),
     );
   }
 }
@@ -162,17 +158,3 @@ class _OrderCard extends StatelessWidget {
   }
 }
 
-void _onNavTap(BuildContext context, int index) {
-  switch (index) {
-    case 0:
-      Navigator.pushReplacementNamed(context, '/home');
-    case 1:
-      Navigator.pushReplacementNamed(context, '/menu');
-    case 2:
-      Navigator.pushReplacementNamed(context, '/qr');
-    case 3:
-      break;
-    case 4:
-      Navigator.pushReplacementNamed(context, '/profile');
-  }
-}

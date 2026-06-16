@@ -89,10 +89,6 @@ class QrScreen extends StatelessWidget {
           ],
         ),
       ),
-      bottomNavigationBar: SmartCanteenNavigationBarButton(
-        currentIndex: 2,
-        onTap: (i) => _onNavTap(context, i),
-      ),
     );
   }
 }
@@ -219,17 +215,3 @@ class _MealChip extends StatelessWidget {
   }
 }
 
-void _onNavTap(BuildContext context, int index) {
-  switch (index) {
-    case 0:
-      Navigator.pushReplacementNamed(context, '/home');
-    case 1:
-      Navigator.pushReplacementNamed(context, '/menu');
-    case 2:
-      break;
-    case 3:
-      Navigator.pushReplacementNamed(context, '/history');
-    case 4:
-      Navigator.pushReplacementNamed(context, '/profile');
-  }
-}

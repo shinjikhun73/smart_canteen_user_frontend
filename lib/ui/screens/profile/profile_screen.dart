@@ -6,7 +6,6 @@ import 'package:provider/provider.dart';
 
 import '../../../theme/app_theme.dart';
 import '../../../ui/states/app_settings_state.dart';
-import '../../widgets/smart_canteen_widgets.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -357,10 +356,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: SmartCanteenNavigationBarButton(
-        currentIndex: 4,
-        onTap: (i) => _onNavTap(context, i),
-      ),
     );
   }
 
@@ -618,17 +613,3 @@ class _PickerOption extends StatelessWidget {
   }
 }
 
-void _onNavTap(BuildContext context, int index) {
-  switch (index) {
-    case 0:
-      Navigator.pushReplacementNamed(context, '/home');
-    case 1:
-      Navigator.pushReplacementNamed(context, '/menu');
-    case 2:
-      Navigator.pushReplacementNamed(context, '/qr');
-    case 3:
-      Navigator.pushReplacementNamed(context, '/history');
-    case 4:
-      break;
-  }
-}

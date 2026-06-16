@@ -39,10 +39,7 @@ class _MenuScreenState extends State<MenuScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-          onPressed: () => Navigator.pop(context),
-        ),
+        automaticallyImplyLeading: false,
         title: const Text(
           'Smart Canteen',
           style: TextStyle(fontWeight: FontWeight.w700),
@@ -147,23 +144,6 @@ class _MenuScreenState extends State<MenuScreen> {
           ),
           if (cart.totalItems > 0) _BottomSummaryBar(cart: cart),
         ],
-      ),
-      bottomNavigationBar: SmartCanteenNavigationBarButton(
-        currentIndex: 1,
-        onTap: (i) {
-          switch (i) {
-            case 0:
-              Navigator.pushReplacementNamed(context, '/home');
-            case 1:
-              break;
-            case 2:
-              Navigator.pushReplacementNamed(context, '/qr');
-            case 3:
-              Navigator.pushReplacementNamed(context, '/history');
-            case 4:
-              Navigator.pushReplacementNamed(context, '/profile');
-          }
-        },
       ),
     );
   }

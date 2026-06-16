@@ -4,6 +4,7 @@ import '../../../models/cart_model.dart';
 import '../../../models/food_item.dart';
 import '../../../theme/app_theme.dart';
 import '../../widgets/smart_canteen_widgets.dart';
+import '../shell/app_shell.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -65,8 +66,8 @@ class _HomeScreenState extends State<HomeScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: _BalanceCard(
                 onTopUp: _showTopUpSheet,
-                onQr: () => Navigator.pushNamed(context, '/qr'),
-                onHistory: () => Navigator.pushNamed(context, '/history'),
+                onQr: () => AppShellScope.maybeOf(context)?.setTab(2),
+                onHistory: () => AppShellScope.maybeOf(context)?.setTab(3),
               ),
             ),
             const SizedBox(height: 24),
@@ -85,7 +86,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       time: '7:00 – 9:00 AM',
                       icon: Icons.wb_sunny_rounded,
                       isActive: true,
-                      onTap: () => Navigator.pushNamed(context, '/qr'),
+                      onTap: () => AppShellScope.maybeOf(context)?.setTab(2),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -95,7 +96,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       time: '11:00 AM – 1:00 PM',
                       icon: Icons.lunch_dining_rounded,
                       isActive: false,
-                      onTap: () => Navigator.pushNamed(context, '/qr'),
+                      onTap: () => AppShellScope.maybeOf(context)?.setTab(2),
                     ),
                   ),
                 ],
@@ -112,8 +113,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: _SectionHeader(
                 title: "Today's Menu",
                 actionLabel: 'View all',
-                onAction: () =>
-                    Navigator.pushReplacementNamed(context, '/menu'),
+                onAction: () => AppShellScope.maybeOf(context)?.setTab(1),
               ),
             ),
             const SizedBox(height: 12),
@@ -189,21 +189,6 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 24),
           ],
         ),
-      ),
-      bottomNavigationBar: SmartCanteenNavigationBarButton(
-        currentIndex: 0,
-        onTap: (i) {
-          switch (i) {
-            case 1:
-              Navigator.pushReplacementNamed(context, '/menu');
-            case 2:
-              Navigator.pushNamed(context, '/qr');
-            case 3:
-              Navigator.pushNamed(context, '/history');
-            case 4:
-              Navigator.pushNamed(context, '/profile');
-          }
-        },
       ),
     );
   }

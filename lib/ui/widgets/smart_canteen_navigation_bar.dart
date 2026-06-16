@@ -103,13 +103,23 @@ class SmartCanteenNavigationBarButton extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
+                        duration: const Duration(milliseconds: 300),
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
                           color: isSelected
                               ? AppTheme.green.withValues(alpha: 0.12)
                               : Colors.transparent,
                           borderRadius: BorderRadius.circular(12),
+                          boxShadow: isSelected
+                              ? [
+                                  BoxShadow(
+                                    color: AppTheme.green
+                                        .withValues(alpha: 0.32),
+                                    blurRadius: 10,
+                                    spreadRadius: 0,
+                                  ),
+                                ]
+                              : [],
                         ),
                         child: Icon(
                           _icons[i],
