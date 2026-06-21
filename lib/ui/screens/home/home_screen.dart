@@ -78,28 +78,8 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 12),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _MealPassCard(
-                      title: 'Breakfast',
-                      time: '7:00 – 9:00 AM',
-                      icon: Icons.wb_sunny_rounded,
-                      isActive: true,
-                      onTap: () => AppShellScope.maybeOf(context)?.setTab(2),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _MealPassCard(
-                      title: 'Lunch',
-                      time: '11:00 AM – 1:00 PM',
-                      icon: Icons.lunch_dining_rounded,
-                      isActive: false,
-                      onTap: () => AppShellScope.maybeOf(context)?.setTab(2),
-                    ),
-                  ),
-                ],
+              child: _MealPassRow(
+                onTap: () => AppShellScope.maybeOf(context)?.setTab(2),
               ),
             ),
             const SizedBox(height: 24),
@@ -108,83 +88,12 @@ class _HomeScreenState extends State<HomeScreen> {
               child: const _PromoBanner(),
             ),
             const SizedBox(height: 24),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: _SectionHeader(
-                title: "Today's Menu",
-                actionLabel: 'View all',
-                onAction: () => AppShellScope.maybeOf(context)?.setTab(1),
-              ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 36,
-              child: ListView.separated(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                scrollDirection: Axis.horizontal,
-                itemCount: _filterLabels.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 8),
-                itemBuilder: (ctx, i) => GestureDetector(
-                  onTap: () => setState(() => _selectedFilter = i),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 18, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: _selectedFilter == i
-                          ? AppTheme.green
-                          : ctx.cardColor,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: _selectedFilter == i
-                            ? AppTheme.green
-                            : ctx.borderColor,
-                      ),
-                      boxShadow: _selectedFilter == i
-                          ? [
-                              BoxShadow(
-                                color: AppTheme.green.withValues(alpha: 0.28),
-                                blurRadius: 8,
-                                offset: const Offset(0, 3),
-                              ),
-                            ]
-                          : null,
-                    ),
-                    child: Text(
-                      _filterLabels[i],
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: _selectedFilter == i
-                            ? Colors.white
-                            : ctx.mutedColor,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: _filteredItems.length,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 16,
-                  crossAxisSpacing: 16,
-                  childAspectRatio: 0.72,
-                ),
-                itemBuilder: (context, index) {
-                  final item = _filteredItems[index];
-                  return _FoodCard(
-                    item: item,
-                    onAdd: () => CartProvider.of(context).add(item),
-                  );
-                },
-              ),
+            _MenuSection(
+              selectedFilter: _selectedFilter,
+              onFilterChanged: (i) => setState(() => _selectedFilter = i),
+              filteredItems: _filteredItems,
+              filterLabels: _filterLabels,
+              onViewAll: () => AppShellScope.maybeOf(context)?.setTab(1),
             ),
             const SizedBox(height: 24),
           ],
@@ -688,6 +597,39 @@ class _MealPassCard extends StatelessWidget {
   }
 }
 
+class _MealPassRow extends StatelessWidget {
+  const _MealPassRow({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _MealPassCard(
+            title: 'Breakfast',
+            time: '7:00 – 9:00 AM',
+            icon: Icons.wb_sunny_rounded,
+            isActive: true,
+            onTap: onTap,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _MealPassCard(
+            title: 'Lunch',
+            time: '11:00 AM – 1:00 PM',
+            icon: Icons.lunch_dining_rounded,
+            isActive: false,
+            onTap: onTap,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _PromoBanner extends StatelessWidget {
   const _PromoBanner();
 
@@ -800,6 +742,122 @@ class _PromoBanner extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _MenuFilterChip extends StatelessWidget {
+  const _MenuFilterChip({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? AppTheme.green : context.cardColor,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? AppTheme.green : context.borderColor,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppTheme.green.withValues(alpha: 0.28),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ]
+              : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: isSelected ? Colors.white : context.mutedColor,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MenuSection extends StatelessWidget {
+  const _MenuSection({
+    required this.selectedFilter,
+    required this.onFilterChanged,
+    required this.filteredItems,
+    required this.filterLabels,
+    required this.onViewAll,
+  });
+
+  final int selectedFilter;
+  final ValueChanged<int> onFilterChanged;
+  final List<FoodItem> filteredItems;
+  final List<String> filterLabels;
+  final VoidCallback onViewAll;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: _SectionHeader(
+            title: "Today's Menu",
+            actionLabel: 'View all',
+            onAction: onViewAll,
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 36,
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            scrollDirection: Axis.horizontal,
+            itemCount: filterLabels.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 8),
+            itemBuilder: (_, i) => _MenuFilterChip(
+              label: filterLabels[i],
+              isSelected: selectedFilter == i,
+              onTap: () => onFilterChanged(i),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: filteredItems.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: 16,
+              crossAxisSpacing: 16,
+              childAspectRatio: 0.72,
+            ),
+            itemBuilder: (context, index) {
+              final item = filteredItems[index];
+              return _FoodCard(
+                item: item,
+                onAdd: () => CartProvider.of(context).add(item),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }
@@ -946,6 +1004,36 @@ class _FoodThumbnail extends StatelessWidget {
   }
 }
 
+class _TopUpAmountTile extends StatelessWidget {
+  const _TopUpAmountTile({required this.amount, required this.onTap});
+
+  final String amount;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: context.surfaceColor,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: context.borderColor),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          amount,
+          style: const TextStyle(
+            color: AppTheme.green,
+            fontWeight: FontWeight.w700,
+            fontSize: 16,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _TopUpSheet extends StatelessWidget {
   const _TopUpSheet({required this.parentContext});
 
@@ -995,7 +1083,8 @@ class _TopUpSheet extends StatelessWidget {
             mainAxisSpacing: 12,
             childAspectRatio: 2.8,
             children: ['\$5', '\$10', '\$20', '\$50'].map((amt) {
-              return GestureDetector(
+              return _TopUpAmountTile(
+                amount: amt,
                 onTap: () {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(parentContext).showSnackBar(
@@ -1006,22 +1095,6 @@ class _TopUpSheet extends StatelessWidget {
                     ),
                   );
                 },
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: context.surfaceColor,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: context.borderColor),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    amt,
-                    style: const TextStyle(
-                      color: AppTheme.green,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
               );
             }).toList(),
           ),
