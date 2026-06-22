@@ -65,6 +65,7 @@ class _SmartCanteenAppState extends State<SmartCanteenApp> {
         Provider<WalletRepository>.value(value: widget.walletRepository),
 
         // Global states
+        ChangeNotifierProvider.value(value: _cart),
         ChangeNotifierProvider(create: (_) => AppSettingsState()),
         ChangeNotifierProvider(create: (_) => OrderHistoryState()),
         ChangeNotifierProvider(
