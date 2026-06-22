@@ -488,7 +488,10 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
                     height: 110,
                     child: Stack(
                       children: [
-                        _FoodImage(item: widget.item),
+                        _FoodImage(
+                          item: widget.item,
+                          aspectRatio: 1.0,
+                        ),
                         Positioned(
                           top: 8,
                           right: 8,
@@ -727,7 +730,10 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
                   child: SizedBox(
                     width: double.infinity,
                     height: 200,
-                    child: _FoodImage(item: widget.item),
+                    child: _FoodImage(
+                      item: widget.item,
+                      aspectRatio: 16 / 9,
+                    ),
                   ),
                 ),
                 Positioned(
@@ -1123,24 +1129,107 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
   }
 }
 
-class _FoodImage extends StatelessWidget {
-  const _FoodImage({required this.item});
+class _FoodImage extends StatefulWidget {
+  const _FoodImage({
+    required this.item,
+    this.aspectRatio = 1.0,
+  });
+
   final FoodItem item;
+  final double aspectRatio;
+
+  @override
+  State<_FoodImage> createState() => _FoodImageState();
+}
+
+class _FoodImageState extends State<_FoodImage> {
+  late ImageProvider _imageProvider;
+  bool _imageLoaded = false;
+  bool _imageError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.item.imagePath != null) {
+      _imageProvider = AssetImage(widget.item.imagePath!);
+      _precacheImage();
+    }
+  }
+
+  void _precacheImage() {
+    precacheImage(_imageProvider, context).then(
+      (_) => setState(() => _imageLoaded = true),
+      onError: (_) => setState(() => _imageError = true),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (item.imagePath != null) {
-      return Image.asset(
-        item.imagePath!,
-        fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => _placeholder(),
-      );
-    }
-    return _placeholder();
+    return AspectRatio(
+      aspectRatio: widget.aspectRatio,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: _buildImageContent(),
+      ),
+    );
   }
 
-  Widget _placeholder() {
-    final idx = item.colorSeed % kFoodGradients.length;
+  Widget _buildImageContent() {
+    if (widget.item.imagePath == null || _imageError) {
+      return _buildPlaceholder();
+    }
+
+    if (!_imageLoaded) {
+      return _buildLoadingPlaceholder();
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: Image(
+        image: _imageProvider,
+        fit: BoxFit.cover,
+        errorBuilder: (_, exception, stackTrace) {
+          setState(() => _imageError = true);
+          return _buildPlaceholder();
+        },
+      ),
+    );
+  }
+
+  Widget _buildLoadingPlaceholder() {
+    final idx = widget.item.colorSeed % kFoodGradients.length;
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            kFoodGradients[idx][0].withValues(alpha: 0.3),
+            kFoodGradients[idx][1].withValues(alpha: 0.3),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Center(
+        child: SizedBox(
+          width: 28,
+          height: 28,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            valueColor: AlwaysStoppedAnimation<Color>(
+              AppTheme.green.withValues(alpha: 0.6),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlaceholder() {
+    final idx = widget.item.colorSeed % kFoodGradients.length;
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -1148,11 +1237,12 @@ class _FoodImage extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Center(
         child: Icon(
           kFoodIcons[idx % kFoodIcons.length],
-          color: AppTheme.green,
+          color: Colors.white.withValues(alpha: 0.8),
           size: 40,
         ),
       ),
