@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 
 import '../../theme/app_theme.dart';
+import '../states/balance_state.dart';
+import '../utils/async_value.dart';
+import '../utils/currency_formatter.dart';
 import 'smart_canteen_button.dart';
 
 // ── Data model ────────────────────────────────────────────────────────────────
@@ -15,7 +19,7 @@ class _BankOption {
     required this.gradientStart,
     required this.gradientEnd,
     required this.brandColor,
-    this.badge,
+    this.isWallet = false,
   });
 
   final String name;
@@ -25,9 +29,7 @@ class _BankOption {
   final Color gradientStart;
   final Color gradientEnd;
   final Color brandColor;
-
-  /// Optional info chip shown below the tagline (e.g. wallet balance).
-  final String? badge;
+  final bool isWallet;
 }
 
 const _kOptions = [
@@ -40,7 +42,7 @@ const _kOptions = [
     gradientStart: Color(0xFF1B5E20),
     gradientEnd: Color(0xFF4CAF50),
     brandColor: Color(0xFF2E7D32),
-    badge: '৳ 65,000',
+    isWallet: true,
   ),
   // ── Banks ─────────────────────────────────────────────────────────────────
   _BankOption(
@@ -372,25 +374,10 @@ class _PaymentCardState extends State<_PaymentCard> {
                         height: 1.3,
                       ),
                     ),
-                    // Wallet balance badge
-                    if (opt.badge != null) ...[
+                    // Wallet balance badge (dynamic)
+                    if (opt.isWallet) ...[
                       const SizedBox(height: 5),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: AppTheme.green.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          opt.badge!,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: AppTheme.green,
-                          ),
-                        ),
-                      ),
+                      _WalletBalanceBadge(),
                     ],
                   ],
                 ),
@@ -485,6 +472,38 @@ class _LogoBadge extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Wallet balance badge ──────────────────────────────────────────────────────
+
+class _WalletBalanceBadge extends StatelessWidget {
+  const _WalletBalanceBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    final balanceUsd = context.watch<BalanceState>().balanceUsd;
+    final balanceText = switch (balanceUsd) {
+      AsyncData<double>(:final data) => CurrencyFormatter.usdToKhr(data),
+      AsyncError() => '--',
+      _ => '···',
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: AppTheme.green.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        balanceText,
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: AppTheme.green,
+        ),
       ),
     );
   }

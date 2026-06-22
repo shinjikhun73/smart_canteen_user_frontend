@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../../models/cart_model.dart';
 import '../../../models/food_item.dart';
 import '../../../theme/app_theme.dart';
+import '../../../ui/states/balance_state.dart';
+import '../../../ui/states/order_history_state.dart';
+import '../../../ui/utils/async_value.dart';
+import '../../../ui/utils/currency_formatter.dart';
+import '../../widgets/cart_bar.dart';
+import '../../widgets/payment_method_sheet.dart';
 import '../../widgets/smart_canteen_widgets.dart';
 import '../shell/app_shell.dart';
 
@@ -17,6 +24,14 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedFilter = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<BalanceState>().fetchBalance();
+    });
+  }
 
   static const _filterLabels = ['All', 'Breakfast', 'Lunch', 'Drinks'];
   static const _filterCats = ['', 'breakfast', 'lunch', 'drinks'];
@@ -45,6 +60,19 @@ class _HomeScreenState extends State<HomeScreen> {
     return 'Good evening,';
   }
 
+  void _showCheckoutSheet(BuildContext context) {
+    final cart = CartProvider.of(context);
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => PaymentMethodSheet(
+        totalAmount: cart.total,
+        onConfirm: () {},
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cart = CartProvider.of(context);
@@ -52,50 +80,60 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: context.bgColor,
       body: SafeArea(
-        child: ListView(
-          padding: EdgeInsets.zero,
+        child: Column(
           children: [
-            _Header(
-              greeting: _greeting,
-              cartCount: cart.totalItems,
-              onCartTap: () => Navigator.pushNamed(context, '/order-summary'),
-              onNotifTap: () {},
-            ),
-            const SizedBox(height: 20),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: _BalanceCard(
-                onTopUp: _showTopUpSheet,
-                onQr: () => AppShellScope.maybeOf(context)?.setTab(2),
-                onHistory: () => AppShellScope.maybeOf(context)?.setTab(3),
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  _Header(
+                    greeting: _greeting,
+                    cartCount: cart.totalItems,
+                    onCartTap: () => Navigator.pushNamed(context, '/order-summary'),
+                    onNotifTap: () {},
+                  ),
+                  const SizedBox(height: 20),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: _BalanceCard(
+                      onTopUp: _showTopUpSheet,
+                      onQr: () => AppShellScope.maybeOf(context)?.setTab(2),
+                      onHistory: () => AppShellScope.maybeOf(context)?.setTab(3),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: _SectionHeader(title: 'Meal Passes'),
+                  ),
+                  const SizedBox(height: 12),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: _MealPassRow(
+                      onTap: () => AppShellScope.maybeOf(context)?.setTab(2),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: const _PromoBanner(),
+                  ),
+                  const SizedBox(height: 24),
+                  _MenuSection(
+                    selectedFilter: _selectedFilter,
+                    onFilterChanged: (i) => setState(() => _selectedFilter = i),
+                    filteredItems: _filteredItems,
+                    filterLabels: _filterLabels,
+                    onViewAll: () => AppShellScope.maybeOf(context)?.setTab(1),
+                  ),
+                  const SizedBox(height: 24),
+                ],
               ),
             ),
-            const SizedBox(height: 24),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: _SectionHeader(title: 'Meal Passes'),
+            CartBar(
+              onViewCart: () => Navigator.pushNamed(context, '/order-summary'),
+              onCheckout: () => _showCheckoutSheet(context),
             ),
-            const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: _MealPassRow(
-                onTap: () => AppShellScope.maybeOf(context)?.setTab(2),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: const _PromoBanner(),
-            ),
-            const SizedBox(height: 24),
-            _MenuSection(
-              selectedFilter: _selectedFilter,
-              onFilterChanged: (i) => setState(() => _selectedFilter = i),
-              filteredItems: _filteredItems,
-              filterLabels: _filterLabels,
-              onViewAll: () => AppShellScope.maybeOf(context)?.setTab(1),
-            ),
-            const SizedBox(height: 24),
           ],
         ),
       ),
@@ -282,6 +320,20 @@ class _BalanceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final balanceUsd = context.watch<BalanceState>().balanceUsd;
+    final String khrText;
+    final String usdText;
+    if (balanceUsd case AsyncData<double>(:final data)) {
+      khrText = CurrencyFormatter.usdToKhr(data);
+      usdText = '≈ ${CurrencyFormatter.formatUSD(data)} USD';
+    } else if (balanceUsd is AsyncError) {
+      khrText = '--';
+      usdText = 'Error loading balance';
+    } else {
+      khrText = '···';
+      usdText = 'Loading…';
+    }
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -386,9 +438,9 @@ class _BalanceCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 22),
-              const Text(
-                '៛65,000',
-                style: TextStyle(
+              Text(
+                khrText,
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 36,
                   fontWeight: FontWeight.w800,
@@ -396,9 +448,9 @@ class _BalanceCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 5),
-              const Text(
-                '≈ \$16.25 USD',
-                style: TextStyle(color: Colors.white60, fontSize: 13),
+              Text(
+                usdText,
+                style: const TextStyle(color: Colors.white60, fontSize: 13),
               ),
               const SizedBox(height: 22),
               Row(
@@ -1086,14 +1138,9 @@ class _TopUpSheet extends StatelessWidget {
               return _TopUpAmountTile(
                 amount: amt,
                 onTap: () {
+                  final val = double.parse(amt.substring(1));
                   Navigator.pop(context);
-                  ScaffoldMessenger.of(parentContext).showSnackBar(
-                    SnackBar(
-                      content: Text('$amt top-up request submitted'),
-                      behavior: SnackBarBehavior.floating,
-                      backgroundColor: AppTheme.green,
-                    ),
-                  );
+                  _doTopUp(parentContext, val, amt);
                 },
               );
             }).toList(),
@@ -1102,6 +1149,157 @@ class _TopUpSheet extends StatelessWidget {
           SmartCanteenButton(
             label: 'Enter Custom Amount',
             onPressed: () => Navigator.pop(context),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Top-up async helpers ──────────────────────────────────────────────────────
+
+Future<void> _doTopUp(BuildContext ctx, double amount, String label) async {
+  showDialog<void>(
+    context: ctx,
+    barrierDismissible: false,
+    builder: (_) => _ProcessingDialog(amountLabel: label),
+  );
+
+  bool success = true;
+  try {
+    await ctx.read<BalanceState>().topUp(amount);
+  } catch (_) {
+    success = false;
+  }
+
+  if (!ctx.mounted) return;
+  Navigator.of(ctx).pop(); // dismiss processing dialog
+  if (!ctx.mounted) return;
+
+  ctx.read<OrderHistoryState>().addOrder(
+    OrderRecord(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      date: _formatNow(),
+      items: 'Wallet Top-up',
+      total: amount,
+      status: success ? 'Completed' : 'Failed',
+      type: 'deposit',
+    ),
+  );
+
+  ScaffoldMessenger.of(ctx).showSnackBar(
+    SnackBar(
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: success ? AppTheme.green : const Color(0xFFE53935),
+      content: Row(
+        children: [
+          Icon(
+            success ? Icons.check_circle_rounded : Icons.error_rounded,
+            color: Colors.white,
+            size: 18,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              success
+                  ? '$label top-up successful!'
+                  : 'Top-up failed. Please try again.',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+String _formatNow() {
+  final dt = DateTime.now();
+  final h = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
+  final m = dt.minute.toString().padLeft(2, '0');
+  final period = dt.hour >= 12 ? 'PM' : 'AM';
+  return 'Today, $h:$m $period';
+}
+
+// ── Processing dialog ─────────────────────────────────────────────────────────
+
+class _ProcessingDialog extends StatefulWidget {
+  const _ProcessingDialog({required this.amountLabel});
+
+  final String amountLabel;
+
+  @override
+  State<_ProcessingDialog> createState() => _ProcessingDialogState();
+}
+
+class _ProcessingDialogState extends State<_ProcessingDialog>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat(reverse: true);
+    _scale = Tween<double>(begin: 0.88, end: 1.12)
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      contentPadding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ScaleTransition(
+            scale: _scale,
+            child: Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: AppTheme.green.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.account_balance_wallet_rounded,
+                color: AppTheme.green,
+                size: 36,
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          const SizedBox(
+            width: 28,
+            height: 28,
+            child: CircularProgressIndicator(
+              color: AppTheme.green,
+              strokeWidth: 2.5,
+            ),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            'Processing ${widget.amountLabel}…',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: context.textColor,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Please wait a moment',
+            style: TextStyle(fontSize: 12, color: context.mutedColor),
           ),
         ],
       ),

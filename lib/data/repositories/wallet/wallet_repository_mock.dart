@@ -17,7 +17,7 @@ class WalletRepositoryMock implements WalletRepository {
 
   @override
   Future<WalletBalanceDto> topUp(double amountUsd) async {
-    await Future.delayed(const Duration(seconds: 1));
+    await Future.delayed(const Duration(seconds: 3));
     _balanceUsd += amountUsd;
     return WalletBalanceDto(
       walletId: 'wallet-mock-001',

@@ -61,32 +61,46 @@ class OrderSummaryScreen extends StatelessWidget {
             const Text(
               'Your order has been placed.\nPlease collect at the counter.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: AppTheme.mutedText, fontSize: 13, height: 1.5),
+              style: TextStyle(
+                color: AppTheme.mutedText,
+                fontSize: 13,
+                height: 1.5,
+              ),
             ),
             const SizedBox(height: 24),
             SmartCanteenButton(
               label: 'Back to Home',
               onPressed: () {
                 final cart = CartProvider.of(context);
-                // Build a summary string from the current cart entries
                 final itemsLabel = cart.entries
-                    .map((e) => e.quantity > 1
-                        ? '${e.item.name} ×${e.quantity}'
-                        : e.item.name)
+                    .map(
+                      (e) => e.quantity > 1
+                          ? '${e.item.name} ×${e.quantity}'
+                          : e.item.name,
+                    )
                     .join(', ');
-                // Push the new order into history as Pending
-                final firstEntry =
-                    cart.entries.isNotEmpty ? cart.entries.first : null;
-                context.read<OrderHistoryState>().addOrder(
-                      OrderRecord(
-                        date: _formatNow(),
-                        items: itemsLabel,
-                        total: cart.total,
-                        status: 'Pending',
-                        imagePath: firstEntry?.item.imagePath,
-                        colorSeed: firstEntry?.item.colorSeed ?? 0,
-                      ),
-                    );
+                final firstEntry = cart.entries.isNotEmpty
+                    ? cart.entries.first
+                    : null;
+                final orderId = DateTime.now().millisecondsSinceEpoch
+                    .toString();
+                final historyState = context.read<OrderHistoryState>();
+                historyState.addOrder(
+                  OrderRecord(
+                    id: orderId,
+                    date: _formatNow(),
+                    items: itemsLabel,
+                    total: cart.total,
+                    status: 'Pending',
+                    session: _inferSession(),
+                    imagePath: firstEntry?.item.imagePath,
+                    colorSeed: firstEntry?.item.colorSeed ?? 0,
+                  ),
+                );
+                // Auto-complete after 3 seconds to simulate canteen processing
+                Future.delayed(const Duration(seconds: 7), () {
+                  historyState.updateOrderStatus(orderId, 'Completed');
+                });
                 cart.clear();
                 Navigator.pushNamedAndRemoveUntil(
                   context,
@@ -273,7 +287,10 @@ class OrderItemCard extends StatelessWidget {
               const SizedBox(height: 4),
               Wrap(
                 spacing: 6,
-                children: entry.item.tags.take(2).map((t) => _SmallTag(label: t)).toList(),
+                children: entry.item.tags
+                    .take(2)
+                    .map((t) => _SmallTag(label: t))
+                    .toList(),
               ),
               const SizedBox(height: 8),
               Row(
@@ -510,4 +527,13 @@ String _formatNow() {
   final m = dt.minute.toString().padLeft(2, '0');
   final period = dt.hour >= 12 ? 'PM' : 'AM';
   return 'Today, $h:$m $period';
+}
+
+// Infers the meal session from the current time.
+// Outside defined windows, falls back to the nearest upcoming session.
+String _inferSession() {
+  final minutes = DateTime.now().hour * 60 + DateTime.now().minute;
+  if (minutes >= 7 * 60 && minutes < 9 * 60) return 'Breakfast';
+  if (minutes >= 11 * 60 && minutes < 13 * 60) return 'Lunch';
+  return minutes < 10 * 60 ? 'Breakfast' : 'Lunch';
 }

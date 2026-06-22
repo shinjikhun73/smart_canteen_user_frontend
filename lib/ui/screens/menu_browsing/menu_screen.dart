@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../models/cart_model.dart';
 import '../../../models/food_item.dart';
 import '../../../theme/app_theme.dart';
+import '../../widgets/cart_bar.dart';
+import '../../widgets/payment_method_sheet.dart';
 import '../../widgets/smart_canteen_widgets.dart';
 
 class MenuScreen extends StatefulWidget {
@@ -30,6 +32,19 @@ class _MenuScreenState extends State<MenuScreen> {
           f.name.toLowerCase().contains(_search.toLowerCase());
       return matchCat && matchSearch;
     }).toList();
+  }
+
+  void _showCheckoutSheet(BuildContext context) {
+    final cart = CartProvider.of(context);
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => PaymentMethodSheet(
+        totalAmount: cart.total,
+        onConfirm: () {},
+      ),
+    );
   }
 
   @override
@@ -142,7 +157,10 @@ class _MenuScreenState extends State<MenuScreen> {
                     },
                   ),
           ),
-          if (cart.totalItems > 0) _BottomSummaryBar(cart: cart),
+          CartBar(
+            onViewCart: () => Navigator.pushNamed(context, '/order-summary'),
+            onCheckout: () => _showCheckoutSheet(context),
+          ),
         ],
       ),
     );
@@ -305,94 +323,6 @@ class _FoodImage extends StatelessWidget {
           color: AppTheme.green,
           size: 40,
         ),
-      ),
-    );
-  }
-}
-
-class _BottomSummaryBar extends StatelessWidget {
-  const _BottomSummaryBar({required this.cart});
-  final CartModel cart;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: context.cardColor,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 10,
-            offset: const Offset(0, -5),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '${cart.totalItems} item${cart.totalItems == 1 ? '' : 's'}',
-                style: const TextStyle(fontSize: 12, color: AppTheme.mutedText),
-              ),
-              Text(
-                '\$${cart.subtotal.toStringAsFixed(2)}',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.green,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.15), // shadow color
-                    blurRadius: 8, // softness
-                    offset: const Offset(0, 4), // position (x, y)
-                  ),
-                ],
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: SmartCanteenButton(
-                label: 'View Cart',
-                onPressed: () => Navigator.pushNamed(context, '/order-summary'),
-                height: 48,
-                radius: 12,
-                fillColor: Colors.white,
-                textColor: AppTheme.green,
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.15),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: SmartCanteenButton(
-                label: 'Checkout',
-                onPressed: () => Navigator.pushNamed(context, '/order-summary'),
-                height: 48,
-                radius: 12,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

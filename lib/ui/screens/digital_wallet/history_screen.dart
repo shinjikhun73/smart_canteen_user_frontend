@@ -59,16 +59,29 @@ class _OrderCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDeposit = order.type == 'deposit';
     final isPending = order.status == 'Pending';
+    final isFailed = order.status == 'Failed';
+
+    const kPending = Color(0xFFFF9800);
+    const kRed = Color(0xFFE53935);
 
     final statusBg = isPending
-        ? const Color(0xFFFFF8E1)
-        : const Color(0xFFE8F5E9);
+        ? kPending.withValues(alpha: 0.12)
+        : isFailed
+            ? kRed.withValues(alpha: 0.1)
+            : AppTheme.green.withValues(alpha: 0.1);
     final statusFg = isPending
-        ? const Color(0xFFF9A825)
-        : AppTheme.green;
+        ? kPending
+        : isFailed
+            ? kRed
+            : AppTheme.green;
 
-    final amountColor =
-        isDeposit ? AppTheme.green : const Color(0xFFE53935);
+    final amountColor = isFailed
+        ? context.mutedColor
+        : isDeposit
+            ? AppTheme.green
+            : isPending
+                ? kPending
+                : kRed;
     final amountLabel = isDeposit
         ? '+\$${order.total.toStringAsFixed(2)}'
         : '-\$${order.total.toStringAsFixed(2)}';

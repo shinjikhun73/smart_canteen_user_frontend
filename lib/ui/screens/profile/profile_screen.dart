@@ -6,6 +6,8 @@ import 'package:provider/provider.dart';
 
 import '../../../theme/app_theme.dart';
 import '../../../ui/states/app_settings_state.dart';
+import '../../../ui/states/balance_state.dart';
+import '../../../ui/utils/async_value.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -102,6 +104,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final balanceUsd = context.watch<BalanceState>().balanceUsd;
+    final String balStr;
+    if (balanceUsd case AsyncData<double>(:final data)) {
+      balStr = '\$${data.toStringAsFixed(2)}';
+    } else if (balanceUsd is AsyncError) {
+      balStr = '--';
+    } else {
+      balStr = '···';
+    }
+
     return Scaffold(
       backgroundColor: context.bgColor,
       body: ListView(
@@ -286,7 +298,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     Expanded(
                         child:
-                            _StatItem(value: '\$16.25', label: 'Balance')),
+                            _StatItem(value: balStr, label: 'Balance')),
                     VerticalDivider(
                       width: 1,
                       color: context.borderColor,
