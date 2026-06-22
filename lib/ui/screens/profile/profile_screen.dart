@@ -106,7 +106,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final balanceUsd = context.watch<BalanceState>().balanceUsd;
-    final orders = context.watch<OrderHistoryState>().orders;
+    final allOrders = context.watch<OrderHistoryState>().orders;
+    final orders = allOrders.where((o) => o.type == 'order').toList();
     final String balStr;
     if (balanceUsd case AsyncData<double>(:final data)) {
       balStr = '\$${data.toStringAsFixed(2)}';

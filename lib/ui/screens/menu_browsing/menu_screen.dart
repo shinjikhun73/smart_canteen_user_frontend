@@ -56,12 +56,13 @@ class _MenuScreenState extends State<MenuScreen> {
             }
 
             final items = cart.entries.map((e) => e.item.name).join(', ');
+            final orderId = DateTime.now().millisecondsSinceEpoch.toString();
             final order = OrderRecord(
-              id: DateTime.now().millisecondsSinceEpoch.toString(),
+              id: orderId,
               date: _formatDate(DateTime.now()),
               items: items,
               total: cart.total,
-              status: 'Completed',
+              status: 'Pending',
               session: 'Lunch',
               imagePath: cart.entries.isNotEmpty ? cart.entries.first.item.imagePath : null,
               colorSeed: cart.entries.isNotEmpty ? cart.entries.first.item.colorSeed : 0,
@@ -69,6 +70,10 @@ class _MenuScreenState extends State<MenuScreen> {
 
             orderHistory.addOrder(order);
             cart.clear();
+
+            Future.delayed(const Duration(seconds: 7), () {
+              orderHistory.updateOrderStatus(orderId, 'Completed');
+            });
 
             scaffoldMessenger.showSnackBar(
               const SnackBar(

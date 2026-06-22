@@ -79,12 +79,13 @@ class _HomeScreenState extends State<HomeScreen> {
             }
 
             final items = cart.entries.map((e) => e.item.name).join(', ');
+            final orderId = DateTime.now().millisecondsSinceEpoch.toString();
             final order = OrderRecord(
-              id: DateTime.now().millisecondsSinceEpoch.toString(),
+              id: orderId,
               date: _formatDate(DateTime.now()),
               items: items,
               total: cart.total,
-              status: 'Completed',
+              status: 'Pending',
               session: 'Lunch',
               imagePath: cart.entries.isNotEmpty ? cart.entries.first.item.imagePath : null,
               colorSeed: cart.entries.isNotEmpty ? cart.entries.first.item.colorSeed : 0,
@@ -92,6 +93,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
             orderHistory.addOrder(order);
             cart.clear();
+
+            Future.delayed(const Duration(seconds: 7), () {
+              orderHistory.updateOrderStatus(orderId, 'Completed');
+            });
 
             scaffoldMessenger.showSnackBar(
               const SnackBar(
@@ -143,7 +148,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     onCartTap: () => Navigator.pushNamed(context, '/order-summary'),
                     onNotifTap: () {},
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: _BalanceCard(
@@ -152,24 +157,24 @@ class _HomeScreenState extends State<HomeScreen> {
                       onHistory: () => AppShellScope.maybeOf(context)?.setTab(3),
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 32),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: _SectionHeader(title: 'Meal Passes'),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: _MealPassRow(
                       onTap: () => AppShellScope.maybeOf(context)?.setTab(2),
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 32),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: const _PromoBanner(),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 32),
                   _MenuSection(
                     selectedFilter: _selectedFilter,
                     onFilterChanged: (i) => setState(() => _selectedFilter = i),
@@ -177,7 +182,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     filterLabels: _filterLabels,
                     onViewAll: () => AppShellScope.maybeOf(context)?.setTab(1),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 32),
                 ],
               ),
             ),
@@ -209,113 +214,161 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-      child: Row(
-        children: [
-          Container(
-            width: 46,
-            height: 46,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF2E7D32), Color(0xFF4CAF50)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: const Text(
-              'JD',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: 15,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  greeting,
-                  style: TextStyle(fontSize: 12, color: context.mutedColor),
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppTheme.green.withValues(alpha: 0.08),
+            Colors.white,
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+        child: Row(
+          children: [
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF2E7D32), Color(0xFF4CAF50)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                Text(
-                  'John Doe',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: context.textColor,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.green.withValues(alpha: 0.25),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
                   ),
+                ],
+              ),
+              alignment: Alignment.center,
+              child: const Text(
+                'JD',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
                 ),
-              ],
+              ),
             ),
-          ),
-          _ActionIcon(icon: Icons.notifications_outlined, onTap: onNotifTap),
-          const SizedBox(width: 8),
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              _ActionIcon(
-                  icon: Icons.shopping_bag_outlined, onTap: onCartTap),
-              if (cartCount > 0)
-                Positioned(
-                  right: 2,
-                  top: 2,
-                  child: Container(
-                    width: 16,
-                    height: 16,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFE53935),
-                      shape: BoxShape.circle,
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    greeting,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w400,
+                      color: context.mutedColor,
+                      letterSpacing: 0.2,
                     ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      '$cartCount',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w700,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'John Doe',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: context.textColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            _ActionIcon(icon: Icons.notifications_outlined, onTap: onNotifTap),
+            const SizedBox(width: 8),
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                _ActionIcon(
+                    icon: Icons.shopping_bag_outlined, onTap: onCartTap),
+                if (cartCount > 0)
+                  Positioned(
+                    right: -2,
+                    top: -2,
+                    child: Container(
+                      width: 18,
+                      height: 18,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE53935),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFE53935).withValues(alpha: 0.4),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        '$cartCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ),
-                ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _ActionIcon extends StatelessWidget {
+class _ActionIcon extends StatefulWidget {
   const _ActionIcon({required this.icon, required this.onTap});
 
   final IconData icon;
   final VoidCallback onTap;
 
   @override
+  State<_ActionIcon> createState() => _ActionIconState();
+}
+
+class _ActionIconState extends State<_ActionIcon> {
+  bool _isPressed = false;
+
+  @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: context.cardColor,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.07),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
-            ),
-          ],
+      onTapDown: (_) => setState(() => _isPressed = true),
+      onTapUp: (_) {
+        setState(() => _isPressed = false);
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _isPressed = false),
+      child: AnimatedScale(
+        scale: _isPressed ? 0.92 : 1.0,
+        duration: const Duration(milliseconds: 80),
+        child: Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            color: context.cardColor,
+            borderRadius: BorderRadius.circular(13),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 12,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Icon(widget.icon, size: 20, color: context.textColor),
         ),
-        child: Icon(icon, size: 20, color: context.textColor),
       ),
     );
   }
@@ -335,21 +388,41 @@ class _SectionHeader extends StatelessWidget {
         Text(
           title,
           style: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w700,
+            fontSize: 19,
+            fontWeight: FontWeight.w800,
             color: context.textColor,
+            letterSpacing: -0.3,
           ),
         ),
         const Spacer(),
         if (actionLabel != null && onAction != null)
           GestureDetector(
             onTap: onAction,
-            child: const Text(
-              'View all',
-              style: TextStyle(
-                fontSize: 13,
-                color: AppTheme.green,
-                fontWeight: FontWeight.w600,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppTheme.green.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'View all',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppTheme.green,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(
+                    Icons.arrow_forward_rounded,
+                    color: AppTheme.green,
+                    size: 14,
+                  ),
+                ],
               ),
             ),
           ),
@@ -595,7 +668,7 @@ class _BalanceBtn extends StatelessWidget {
   }
 }
 
-class _MealPassCard extends StatelessWidget {
+class _MealPassCard extends StatefulWidget {
   const _MealPassCard({
     required this.title,
     required this.time,
@@ -611,89 +684,132 @@ class _MealPassCard extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
+  State<_MealPassCard> createState() => _MealPassCardState();
+}
+
+class _MealPassCardState extends State<_MealPassCard> {
+  bool _isPressed = false;
+
+  @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: isActive ? AppTheme.green : context.cardColor,
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(
-              color: isActive
-                  ? AppTheme.green.withValues(alpha: 0.3)
-                  : Colors.black.withValues(alpha: 0.06),
-              blurRadius: 14,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: isActive
-                        ? Colors.white.withValues(alpha: 0.2)
-                        : context.surfaceColor,
-                    borderRadius: BorderRadius.circular(10),
+      onTapDown: (_) => setState(() => _isPressed = true),
+      onTapUp: (_) {
+        setState(() => _isPressed = false);
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _isPressed = false),
+      child: AnimatedScale(
+        scale: _isPressed ? 0.96 : 1.0,
+        duration: const Duration(milliseconds: 100),
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: widget.isActive ? AppTheme.green : context.cardColor,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: widget.isActive
+                    ? AppTheme.green.withValues(alpha: 0.35)
+                    : Colors.black.withValues(alpha: 0.05),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: widget.isActive
+                          ? Colors.white.withValues(alpha: 0.25)
+                          : AppTheme.green.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: widget.isActive
+                          ? [
+                              BoxShadow(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: Icon(
+                      widget.icon,
+                      size: 20,
+                      color: widget.isActive ? Colors.white : AppTheme.green,
+                    ),
                   ),
-                  child: Icon(
-                    icon,
+                  const Spacer(),
+                  Icon(
+                    Icons.qr_code_2,
                     size: 18,
-                    color: isActive ? Colors.white : AppTheme.green,
+                    color: widget.isActive ? Colors.white60 : context.mutedColor,
                   ),
-                ),
-                const Spacer(),
-                Icon(
-                  Icons.qr_code_2,
-                  size: 18,
-                  color: isActive ? Colors.white60 : context.mutedColor,
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 14,
-                color: isActive ? Colors.white : context.textColor,
+                ],
               ),
-            ),
-            const SizedBox(height: 3),
-            Text(
-              time,
-              style: TextStyle(
-                fontSize: 11,
-                color: isActive ? Colors.white70 : context.mutedColor,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: isActive
-                    ? Colors.white.withValues(alpha: 0.2)
-                    : context.borderColor,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                isActive ? 'Active' : 'Upcoming',
+              const SizedBox(height: 14),
+              Text(
+                widget.title,
                 style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: isActive ? Colors.white : context.mutedColor,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                  color: widget.isActive ? Colors.white : context.textColor,
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 4),
+              Text(
+                widget.time,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w400,
+                  color: widget.isActive ? Colors.white70 : context.mutedColor,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: widget.isActive
+                      ? Colors.white.withValues(alpha: 0.2)
+                      : context.surfaceColor,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: widget.isActive
+                            ? Colors.white
+                            : AppTheme.green,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      widget.isActive ? 'Active' : 'Upcoming',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: widget.isActive
+                            ? Colors.white
+                            : context.mutedColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -733,25 +849,47 @@ class _MealPassRow extends StatelessWidget {
   }
 }
 
-class _PromoBanner extends StatelessWidget {
+class _PromoBanner extends StatefulWidget {
   const _PromoBanner();
+
+  @override
+  State<_PromoBanner> createState() => _PromoBannerState();
+}
+
+class _PromoBannerState extends State<_PromoBanner> with SingleTickerProviderStateMixin {
+  late AnimationController _iconController;
+
+  @override
+  void initState() {
+    super.initState();
+    _iconController = AnimationController(
+      duration: const Duration(seconds: 2),
+      vsync: this,
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _iconController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF2E7D32), Color(0xFF4CAF50)],
+          colors: [Color(0xFF1B5E20), Color(0xFF43A047)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.green.withValues(alpha: 0.3),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
+            color: AppTheme.green.withValues(alpha: 0.4),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -764,62 +902,73 @@ class _PromoBanner extends StatelessWidget {
               children: [
                 Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Text(
-                    'EXCLUSIVE OFFER',
+                    '✨ EXCLUSIVE',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.2,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.5,
                     ),
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
                 const Text(
                   'Fresh Daily\nCampus Food',
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w800,
-                    fontSize: 16,
+                    fontSize: 18,
                     height: 1.2,
+                    letterSpacing: -0.3,
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 const Text(
                   '20% off for CADT Scholars\nthis week only',
                   style: TextStyle(
                     color: Colors.white70,
-                    fontSize: 11,
-                    height: 1.4,
+                    fontSize: 12,
+                    height: 1.5,
+                    fontWeight: FontWeight.w400,
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 GestureDetector(
                   onTap: () => ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Discount coupon applied!'),
+                      content: Text('✓ Discount coupon applied!'),
                       behavior: SnackBarBehavior.floating,
-                      backgroundColor: AppTheme.green,
+                      backgroundColor: Color(0xFF1B5E20),
+                      duration: Duration(seconds: 2),
                     ),
                   ),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 9),
+                        horizontal: 20, vertical: 11),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.15),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
                     child: const Text(
                       'Claim Now',
                       style: TextStyle(
-                        color: Color(0xFF2E7D32),
+                        color: Color(0xFF1B5E20),
                         fontWeight: FontWeight.w700,
-                        fontSize: 12,
+                        fontSize: 13,
+                        letterSpacing: 0.3,
                       ),
                     ),
                   ),
@@ -827,19 +976,35 @@ class _PromoBanner extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 16),
           Expanded(
             flex: 2,
             child: Container(
-              height: 130,
+              height: 140,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(16),
+                color: Colors.white.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.white.withValues(alpha: 0.1),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              child: const Icon(
-                Icons.ramen_dining_rounded,
-                color: Colors.white,
-                size: 64,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  ScaleTransition(
+                    scale: Tween<double>(begin: 1.0, end: 1.08)
+                        .animate(_iconController),
+                    child: const Icon(
+                      Icons.ramen_dining_rounded,
+                      color: Colors.white,
+                      size: 70,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -849,7 +1014,7 @@ class _PromoBanner extends StatelessWidget {
   }
 }
 
-class _MenuFilterChip extends StatelessWidget {
+class _MenuFilterChip extends StatefulWidget {
   const _MenuFilterChip({
     required this.label,
     required this.isSelected,
@@ -861,34 +1026,60 @@ class _MenuFilterChip extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
+  State<_MenuFilterChip> createState() => _MenuFilterChipState();
+}
+
+class _MenuFilterChipState extends State<_MenuFilterChip> {
+  bool _isPressed = false;
+
+  @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? AppTheme.green : context.cardColor,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected ? AppTheme.green : context.borderColor,
+      onTapDown: (_) => setState(() => _isPressed = true),
+      onTapUp: (_) {
+        setState(() => _isPressed = false);
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _isPressed = false),
+      child: AnimatedScale(
+        scale: _isPressed ? 0.94 : 1.0,
+        duration: const Duration(milliseconds: 80),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
+          decoration: BoxDecoration(
+            color: widget.isSelected ? AppTheme.green : Colors.transparent,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(
+              color: widget.isSelected
+                  ? AppTheme.green
+                  : context.borderColor,
+              width: widget.isSelected ? 0 : 1.2,
+            ),
+            boxShadow: widget.isSelected
+                ? [
+                    BoxShadow(
+                      color: AppTheme.green.withValues(alpha: 0.32),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
           ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: AppTheme.green.withValues(alpha: 0.28),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
-                  ),
-                ]
-              : null,
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: isSelected ? Colors.white : context.mutedColor,
+          child: Text(
+            widget.label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: widget.isSelected ? Colors.white : context.mutedColor,
+              letterSpacing: 0.2,
+            ),
           ),
         ),
       ),
@@ -947,9 +1138,9 @@ class _MenuSection extends StatelessWidget {
             itemCount: filteredItems.length,
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
-              mainAxisSpacing: 16,
-              crossAxisSpacing: 16,
-              childAspectRatio: 0.72,
+              mainAxisSpacing: 18,
+              crossAxisSpacing: 18,
+              childAspectRatio: 0.68,
             ),
             itemBuilder: (context, index) {
               final item = filteredItems[index];
@@ -965,104 +1156,160 @@ class _MenuSection extends StatelessWidget {
   }
 }
 
-class _FoodCard extends StatelessWidget {
+class _FoodCard extends StatefulWidget {
   const _FoodCard({required this.item, required this.onAdd});
 
   final FoodItem item;
   final VoidCallback onAdd;
 
   @override
+  State<_FoodCard> createState() => _FoodCardState();
+}
+
+class _FoodCardState extends State<_FoodCard> {
+  bool _isPressed = false;
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: context.cardColor,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.07),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _isPressed = true),
+      onTapUp: (_) => setState(() => _isPressed = false),
+      onTapCancel: () => setState(() => _isPressed = false),
+      child: AnimatedScale(
+        scale: _isPressed ? 0.96 : 1.0,
+        duration: const Duration(milliseconds: 100),
+        child: Container(
+          decoration: BoxDecoration(
+            color: context.cardColor,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 18,
+                offset: const Offset(0, 5),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: ClipRRect(
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(18)),
-              child: _FoodThumbnail(item: item),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                    color: context.textColor,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Stack(
                   children: [
-                    const Icon(Icons.star_rounded,
-                        color: Color(0xFFFFA726), size: 13),
-                    const SizedBox(width: 3),
-                    Text(
-                      item.rating.toStringAsFixed(1),
-                      style: TextStyle(
-                          color: context.mutedColor, fontSize: 11),
+                    ClipRRect(
+                      borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(20)),
+                      child: _FoodThumbnail(item: widget.item),
                     ),
-                    const Spacer(),
-                    Text(
-                      '\$${item.price.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        color: AppTheme.green,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFB74D).withValues(
+                              alpha: 0.95),
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.15),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.star_rounded,
+                                color: Colors.white, size: 14),
+                            const SizedBox(width: 3),
+                            Text(
+                              widget.item.rating.toStringAsFixed(1),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                GestureDetector(
-                  onTap: onAdd,
-                  child: Container(
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: AppTheme.green,
-                      borderRadius: BorderRadius.circular(10),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.item.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        color: context.textColor,
+                      ),
                     ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Icon(Icons.add_shopping_cart_rounded,
-                            color: Colors.white, size: 13),
-                        SizedBox(width: 5),
                         Text(
-                          'Add',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 12,
+                          '\$${widget.item.price.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            color: AppTheme.green,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15,
                           ),
                         ),
                       ],
                     ),
-                  ),
+                    const SizedBox(height: 10),
+                    GestureDetector(
+                      onTap: widget.onAdd,
+                      child: Container(
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: AppTheme.green,
+                          borderRadius: BorderRadius.circular(11),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.green.withValues(alpha: 0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.add_rounded,
+                                color: Colors.white, size: 16),
+                            SizedBox(width: 4),
+                            Text(
+                              'Add',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
