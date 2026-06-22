@@ -199,138 +199,147 @@ class _MenuScreenState extends State<MenuScreen> {
           ),
         ],
       ),
-      body: Column(
+      body: Stack(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-            child: Container(
-              decoration: BoxDecoration(
-                color: context.cardColor,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 12,
-                    offset: const Offset(0, 3),
+          Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: context.cardColor,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 12,
+                        offset: const Offset(0, 3),
+                      ),
+                      BoxShadow(
+                        color: AppTheme.green.withValues(alpha: 0.06),
+                        blurRadius: 6,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
                   ),
-                  BoxShadow(
-                    color: AppTheme.green.withValues(alpha: 0.06),
-                    blurRadius: 6,
-                    offset: const Offset(0, 1),
-                  ),
-                ],
-              ),
-              child: TextField(
-                onChanged: (v) => setState(() => _search = v),
-                decoration: InputDecoration(
-                  hintText: 'Find your favorite food',
-                  hintStyle: TextStyle(
-                    color: context.mutedColor,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w400,
-                  ),
-                  prefixIcon: Padding(
-                    padding: const EdgeInsets.only(left: 14, right: 10),
-                    child: Icon(
-                      Icons.search_rounded,
-                      color: context.mutedColor,
-                      size: 20,
+                  child: TextField(
+                    onChanged: (v) => setState(() => _search = v),
+                    decoration: InputDecoration(
+                      hintText: 'Find your favorite food',
+                      hintStyle: TextStyle(
+                        color: context.mutedColor,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w400,
+                      ),
+                      prefixIcon: Padding(
+                        padding: const EdgeInsets.only(left: 14, right: 10),
+                        child: Icon(
+                          Icons.search_rounded,
+                          color: context.mutedColor,
+                          size: 20,
+                        ),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                    ),
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: context.textColor,
                     ),
                   ),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                ),
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: context.textColor,
                 ),
               ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: List.generate(_filters.length, (i) {
-                return Padding(
-                  padding: const EdgeInsets.only(right: 10),
-                  child: _ModernFilterChip(
-                    label: _filters[i],
-                    isSelected: _selectedFilter == i,
-                    onTap: () => setState(() => _selectedFilter = i),
-                  ),
-                );
-              }),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: items.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 72,
-                          height: 72,
-                          decoration: BoxDecoration(
-                            color: AppTheme.green.withValues(alpha: 0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.search_off_rounded,
-                            size: 36,
-                            color: AppTheme.green,
-                          ),
+              const SizedBox(height: 8),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  children: List.generate(_filters.length, (i) {
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 10),
+                      child: _ModernFilterChip(
+                        label: _filters[i],
+                        isSelected: _selectedFilter == i,
+                        onTap: () => setState(() => _selectedFilter = i),
+                      ),
+                    );
+                  }),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: items.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 72,
+                              height: 72,
+                              decoration: BoxDecoration(
+                                color: AppTheme.green.withValues(alpha: 0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.search_off_rounded,
+                                size: 36,
+                                color: AppTheme.green,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'No items found',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: context.textColor,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Try adjusting your filters or search',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: context.mutedColor,
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No items found',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: context.textColor,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Try adjusting your filters or search',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: context.mutedColor,
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    itemCount: items.length,
-                    itemBuilder: (context, index) {
-                      final item = items[index];
-                      final isExpanded = _expandedItemId == item.id;
-                      return Consumer<CartModel>(
-                        builder: (context, _, _) {
-                          return FoodItemCard(
-                            item: item,
-                            isExpanded: isExpanded,
-                            onTap: () => setState(() {
-                              _expandedItemId = isExpanded ? null : item.id;
-                            }),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
+                        itemCount: items.length,
+                        itemBuilder: (context, index) {
+                          final item = items[index];
+                          final isExpanded = _expandedItemId == item.id;
+                          return Consumer<CartModel>(
+                            builder: (context, _, _) {
+                              return FoodItemCard(
+                                item: item,
+                                isExpanded: isExpanded,
+                                onTap: () => setState(() {
+                                  _expandedItemId = isExpanded ? null : item.id;
+                                }),
+                              );
+                            },
                           );
                         },
-                      );
-                    },
-                  ),
+                      ),
+              ),
+            ],
           ),
-          CartBar(
-            onViewCart: () => Navigator.pushNamed(context, '/order-summary'),
-            onCheckout: () => _showCheckoutSheet(context),
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: CartBar(
+              onViewCart: () => Navigator.pushNamed(context, '/order-summary'),
+              onCheckout: () => _showCheckoutSheet(context),
+            ),
           ),
         ],
       ),
@@ -476,7 +485,7 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
               ],
             ),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 ClipRRect(
                   borderRadius: const BorderRadius.only(
@@ -1150,17 +1159,46 @@ class _FoodImageState extends State<_FoodImage> {
   @override
   void initState() {
     super.initState();
-    if (widget.item.imagePath != null) {
-      _imageProvider = AssetImage(widget.item.imagePath!);
-      _precacheImage();
+    _initializeImage();
+  }
+
+  void _initializeImage() {
+    if (widget.item.imagePath != null && widget.item.imagePath!.isNotEmpty) {
+      try {
+        _imageProvider = AssetImage(widget.item.imagePath!);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _precacheImage();
+          }
+        });
+      } catch (e) {
+        setState(() => _imageError = true);
+      }
+    } else {
+      setState(() => _imageError = true);
     }
   }
 
   void _precacheImage() {
-    precacheImage(_imageProvider, context).then(
-      (_) => setState(() => _imageLoaded = true),
-      onError: (_) => setState(() => _imageError = true),
-    );
+    if (!mounted) return;
+    try {
+      precacheImage(_imageProvider, context).then(
+        (_) {
+          if (mounted) {
+            setState(() => _imageLoaded = true);
+          }
+        },
+        onError: (error, stackTrace) {
+          if (mounted) {
+            setState(() => _imageError = true);
+          }
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        setState(() => _imageError = true);
+      }
+    }
   }
 
   @override
@@ -1178,7 +1216,7 @@ class _FoodImageState extends State<_FoodImage> {
   }
 
   Widget _buildImageContent() {
-    if (widget.item.imagePath == null || _imageError) {
+    if (widget.item.imagePath == null || widget.item.imagePath!.isEmpty || _imageError) {
       return _buildPlaceholder();
     }
 
@@ -1192,7 +1230,11 @@ class _FoodImageState extends State<_FoodImage> {
         image: _imageProvider,
         fit: BoxFit.cover,
         errorBuilder: (_, exception, stackTrace) {
-          setState(() => _imageError = true);
+          Future.microtask(() {
+            if (mounted) {
+              setState(() => _imageError = true);
+            }
+          });
           return _buildPlaceholder();
         },
       ),

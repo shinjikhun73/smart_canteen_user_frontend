@@ -52,7 +52,7 @@ const List<FoodItem> kMenuItems = [
     rating: 4.7,
     tags: ['Soup', 'Traditional'],
     category: 'breakfast',
-    imagePath: 'asset/foods/khmer noodle.png',
+    imagePath: 'asset/foods/khmer_noodle.png',
   ),
   FoodItem(
     id: '2',
@@ -62,7 +62,7 @@ const List<FoodItem> kMenuItems = [
     rating: 4.8,
     tags: ['Grilled', 'Sweet', 'Spicy'],
     category: 'lunch',
-    imagePath: 'asset/foods/pork with rice.png',
+    imagePath: 'asset/foods/pork_with_rice.png',
   ),
   FoodItem(
     id: '3',
@@ -72,7 +72,7 @@ const List<FoodItem> kMenuItems = [
     rating: 4.9,
     tags: ['Soft', 'Sweet'],
     category: 'lunch',
-    imagePath: 'asset/foods/chicken with rice.png',
+    imagePath: 'asset/foods/chicken_with_rice.png',
   ),
   FoodItem(
     id: '4',
@@ -82,7 +82,7 @@ const List<FoodItem> kMenuItems = [
     rating: 4.5,
     tags: ['Simple', 'Quick'],
     category: 'breakfast',
-    imagePath: 'asset/foods/fried egg rice.png',
+    imagePath: 'asset/foods/fried_egg_rice.png',
   ),
   FoodItem(
     id: '5',
@@ -92,7 +92,7 @@ const List<FoodItem> kMenuItems = [
     rating: 4.6,
     tags: ['Cold', 'Sweet'],
     category: 'drinks',
-    imagePath: 'asset/drinks/coconut milk tea.png',
+    imagePath: 'asset/drinks/coconut_milk_tea.png',
   ),
   FoodItem(
     id: '6',
@@ -102,7 +102,7 @@ const List<FoodItem> kMenuItems = [
     rating: 4.4,
     tags: ['Cold', 'Fresh'],
     category: 'drinks',
-    imagePath: 'asset/drinks/sugarcane juice.png',
+    imagePath: 'asset/drinks/sugarcane_juice.png',
   ),
   // FoodItem(
   //   id: '7',
@@ -123,6 +123,6 @@ const List<FoodItem> kMenuItems = [
     rating: 4.9,
     tags: ['Stir-fried', 'Savory'],
     category: 'lunch',
-    imagePath: 'asset/foods/beef lok lak.png',
+    imagePath: 'asset/foods/beef_lok_lak.png',
   ),
 ];
