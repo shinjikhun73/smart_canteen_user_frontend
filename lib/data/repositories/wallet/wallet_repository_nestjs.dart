@@ -14,6 +14,11 @@ class WalletRepositoryNestjs implements WalletRepository {
   }
 
   @override
+  Future<WalletBalanceDto> payment(double amountUsd) {
+    throw UnimplementedError('Connect payment endpoint');
+  }
+
+  @override
   Future<List<TransactionDto>> getTransactions() {
     throw UnimplementedError('Connect ${ApiConfig.transactions} endpoint');
   }

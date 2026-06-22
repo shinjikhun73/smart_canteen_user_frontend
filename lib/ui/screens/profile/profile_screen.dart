@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../../theme/app_theme.dart';
 import '../../../ui/states/app_settings_state.dart';
 import '../../../ui/states/balance_state.dart';
+import '../../../ui/states/order_history_state.dart';
 import '../../../ui/utils/async_value.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -105,6 +106,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final balanceUsd = context.watch<BalanceState>().balanceUsd;
+    final orders = context.watch<OrderHistoryState>().orders;
     final String balStr;
     if (balanceUsd case AsyncData<double>(:final data)) {
       balStr = '\$${data.toStringAsFixed(2)}';
@@ -248,7 +250,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(height: 12),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 6),
+                    horizontal: 14,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.18),
                     borderRadius: BorderRadius.circular(20),
@@ -289,7 +293,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Row(
                   children: [
                     Expanded(
-                        child: _StatItem(value: '24', label: 'Orders')),
+                      child: _StatItem(
+                        value: '${orders.length}',
+                        label: 'Orders',
+                      ),
+                    ),
                     VerticalDivider(
                       width: 1,
                       color: context.borderColor,
@@ -297,8 +305,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       endIndent: 8,
                     ),
                     Expanded(
-                        child:
-                            _StatItem(value: balStr, label: 'Balance')),
+                      child: _StatItem(value: balStr, label: 'Balance'),
+                    ),
                     VerticalDivider(
                       width: 1,
                       color: context.borderColor,
@@ -306,7 +314,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       endIndent: 8,
                     ),
                     Expanded(
-                        child: _StatItem(value: '320', label: 'Points')),
+                      child: _StatItem(value: '320', label: 'Points'),
+                    ),
                   ],
                 ),
               ),
@@ -328,9 +337,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ],
               ),
-              child: Column(
-                children: _buildMenuItems(context),
-              ),
+              child: Column(children: _buildMenuItems(context)),
             ),
           ),
 
@@ -338,8 +345,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
             child: GestureDetector(
-              onTap: () => Navigator.pushNamedAndRemoveUntil(
-                  context, '/', (_) => false),
+              onTap: () =>
+                  Navigator.pushNamedAndRemoveUntil(context, '/', (_) => false),
               child: Container(
                 height: 52,
                 decoration: BoxDecoration(
@@ -350,8 +357,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.logout_rounded,
-                        color: Color(0xFFE53935), size: 20),
+                    Icon(
+                      Icons.logout_rounded,
+                      color: Color(0xFFE53935),
+                      size: 20,
+                    ),
                     SizedBox(width: 8),
                     Text(
                       'Log Out',
@@ -385,46 +395,57 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     for (var i = 0; i < staticItems.length; i++) {
       final item = staticItems[i];
-      rows.add(_menuRow(
-        context: context,
-        icon: item.$1,
-        title: item.$2,
-        subtitle: item.$3,
-        isFirst: i == 0,
-        isLast: false,
-        onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${item.$2} — coming soon'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppTheme.green,
+      rows.add(
+        _menuRow(
+          context: context,
+          icon: item.$1,
+          title: item.$2,
+          subtitle: item.$3,
+          isFirst: i == 0,
+          isLast: false,
+          onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${item.$2} — coming soon'),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: AppTheme.green,
+            ),
           ),
         ),
-      ));
-      rows.add(Divider(
-          indent: 70, endIndent: 16, height: 1, color: context.borderColor));
+      );
+      rows.add(
+        Divider(
+          indent: 70,
+          endIndent: 16,
+          height: 1,
+          color: context.borderColor,
+        ),
+      );
     }
 
     // Dark mode toggle row
     rows.add(_darkModeRow(context, settings));
-    rows.add(Divider(
-        indent: 70, endIndent: 16, height: 1, color: context.borderColor));
+    rows.add(
+      Divider(indent: 70, endIndent: 16, height: 1, color: context.borderColor),
+    );
 
     // About row
-    rows.add(_menuRow(
-      context: context,
-      icon: Icons.info_outline,
-      title: 'About',
-      subtitle: 'App info & version',
-      isFirst: false,
-      isLast: true,
-      onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('About — coming soon'),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: AppTheme.green,
+    rows.add(
+      _menuRow(
+        context: context,
+        icon: Icons.info_outline,
+        title: 'About',
+        subtitle: 'App info & version',
+        isFirst: false,
+        isLast: true,
+        onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('About — coming soon'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppTheme.green,
+          ),
         ),
       ),
-    ));
+    );
 
     return rows;
   }
@@ -475,16 +496,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const SizedBox(height: 2),
                     Text(
                       subtitle,
-                      style: TextStyle(
-                        color: context.mutedColor,
-                        fontSize: 11,
-                      ),
+                      style: TextStyle(color: context.mutedColor, fontSize: 11),
                     ),
                   ],
                 ),
               ),
-              Icon(Icons.arrow_forward_ios_rounded,
-                  size: 13, color: context.mutedColor),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 13,
+                color: context.mutedColor,
+              ),
             ],
           ),
         ),
@@ -566,10 +587,7 @@ class _StatItem extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 5),
-        Text(
-          label,
-          style: TextStyle(fontSize: 12, color: context.mutedColor),
-        ),
+        Text(label, style: TextStyle(fontSize: 12, color: context.mutedColor)),
       ],
     );
   }
@@ -591,8 +609,9 @@ class _PickerOption extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = isDestructive ? const Color(0xFFE53935) : AppTheme.green;
-    final bgColor =
-        isDestructive ? const Color(0xFFFFEBEE) : context.surfaceColor;
+    final bgColor = isDestructive
+        ? const Color(0xFFFFEBEE)
+        : context.surfaceColor;
 
     return Material(
       color: Colors.transparent,
@@ -624,4 +643,3 @@ class _PickerOption extends StatelessWidget {
     );
   }
 }
-

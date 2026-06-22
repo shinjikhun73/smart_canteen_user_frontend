@@ -35,6 +35,12 @@ class BalanceState extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> payment(double amountUsd) async {
+    final dto = await _walletRepository.payment(amountUsd);
+    _balanceUsd = AsyncData(dto.balanceUsd);
+    notifyListeners();
+  }
+
   Future<void> fetchTransactions() async {
     _transactions = const AsyncLoading();
     notifyListeners();

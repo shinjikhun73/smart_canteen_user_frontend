@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../models/cart_model.dart';
 import '../../../models/food_item.dart';
 import '../../../theme/app_theme.dart';
+import '../../../ui/states/balance_state.dart';
 import '../../../ui/states/order_history_state.dart';
 import '../../widgets/payment_method_sheet.dart';
 import '../../widgets/smart_canteen_widgets.dart';
@@ -14,13 +15,35 @@ class OrderSummaryScreen extends StatelessWidget {
   static const routeName = '/order-summary';
 
   void _showPaymentMethodSheet(BuildContext context, double amount) {
+    final balanceState = context.read<BalanceState>();
+
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => PaymentMethodSheet(
         totalAmount: amount,
-        onConfirm: () => _showPaymentSuccess(context),
+        onConfirm: (paymentMethod) async {
+          try {
+            if (paymentMethod == 'SC') {
+              await balanceState.payment(amount);
+            }
+            if (context.mounted) {
+              _showPaymentSuccess(context);
+            }
+          } catch (e) {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Payment failed: $e'),
+                  behavior: SnackBarBehavior.floating,
+                  backgroundColor: const Color(0xFFE53935),
+                  duration: const Duration(seconds: 3),
+                ),
+              );
+            }
+          }
+        },
       ),
     );
   }

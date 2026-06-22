@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../../models/cart_model.dart';
 import '../../../models/food_item.dart';
 import '../../../theme/app_theme.dart';
+import '../../../ui/states/balance_state.dart';
+import '../../../ui/states/order_history_state.dart';
 import '../../widgets/cart_bar.dart';
 import '../../widgets/payment_method_sheet.dart';
 import '../../widgets/smart_canteen_widgets.dart';
@@ -36,15 +39,66 @@ class _MenuScreenState extends State<MenuScreen> {
 
   void _showCheckoutSheet(BuildContext context) {
     final cart = CartProvider.of(context);
+    final balanceState = context.read<BalanceState>();
+    final orderHistory = context.read<OrderHistoryState>();
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => PaymentMethodSheet(
         totalAmount: cart.total,
-        onConfirm: () {},
+        onConfirm: (paymentMethod) async {
+          try {
+            if (paymentMethod == 'SC') {
+              await balanceState.payment(cart.total);
+            }
+
+            final items = cart.entries.map((e) => e.item.name).join(', ');
+            final order = OrderRecord(
+              id: DateTime.now().millisecondsSinceEpoch.toString(),
+              date: _formatDate(DateTime.now()),
+              items: items,
+              total: cart.total,
+              status: 'Completed',
+              session: 'Lunch',
+              imagePath: cart.entries.isNotEmpty ? cart.entries.first.item.imagePath : null,
+              colorSeed: cart.entries.isNotEmpty ? cart.entries.first.item.colorSeed : 0,
+            );
+
+            orderHistory.addOrder(order);
+            cart.clear();
+
+            scaffoldMessenger.showSnackBar(
+              const SnackBar(
+                content: Text('Payment successful! Order added to history.'),
+                behavior: SnackBarBehavior.floating,
+                backgroundColor: AppTheme.green,
+                duration: Duration(seconds: 2),
+              ),
+            );
+          } catch (e) {
+            scaffoldMessenger.showSnackBar(
+              SnackBar(
+                content: Text('Payment failed: $e'),
+                behavior: SnackBarBehavior.floating,
+                backgroundColor: const Color(0xFFE53935),
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          }
+        },
       ),
     );
+  }
+
+  String _formatDate(DateTime dt) {
+    final now = DateTime.now();
+    if (dt.day == now.day && dt.month == now.month && dt.year == now.year) {
+      return 'Today, ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')} ${dt.hour >= 12 ? 'PM' : 'AM'}';
+    }
+    return '${dt.month}/${dt.day}, ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
   }
 
   @override

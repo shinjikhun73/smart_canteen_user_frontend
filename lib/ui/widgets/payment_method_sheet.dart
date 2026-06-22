@@ -84,7 +84,7 @@ class PaymentMethodSheet extends StatefulWidget {
   });
 
   final double totalAmount;
-  final VoidCallback onConfirm;
+  final Function(String paymentMethod) onConfirm;
 
   @override
   State<PaymentMethodSheet> createState() => _PaymentMethodSheetState();
@@ -181,7 +181,7 @@ class _PaymentMethodSheetState extends State<PaymentMethodSheet> {
                   label: 'Confirm Payment',
                   onPressed: () {
                     Navigator.pop(context);
-                    widget.onConfirm();
+                    widget.onConfirm(_kOptions[_selected!].shortCode);
                   },
                   height: 52,
                   radius: 14,

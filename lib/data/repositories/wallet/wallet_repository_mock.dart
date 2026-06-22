@@ -28,6 +28,21 @@ class WalletRepositoryMock implements WalletRepository {
   }
 
   @override
+  Future<WalletBalanceDto> payment(double amountUsd) async {
+    await Future.delayed(const Duration(milliseconds: 800));
+    if (_balanceUsd < amountUsd) {
+      throw Exception('Insufficient balance');
+    }
+    _balanceUsd -= amountUsd;
+    return WalletBalanceDto(
+      walletId: 'wallet-mock-001',
+      balanceKhr: _balanceUsd * 4000,
+      balanceUsd: _balanceUsd,
+      isActive: true,
+    );
+  }
+
+  @override
   Future<List<TransactionDto>> getTransactions() async {
     await Future.delayed(const Duration(milliseconds: 600));
     return [
