@@ -17,11 +17,18 @@ class SmartCanteenAuthSwitch extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(4),
+      padding: const EdgeInsets.all(5),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppTheme.border),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE8E8E8), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.green.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -45,7 +52,7 @@ class SmartCanteenAuthSwitch extends StatelessWidget {
   }
 }
 
-class _AuthSwitchItem extends StatelessWidget {
+class _AuthSwitchItem extends StatefulWidget {
   const _AuthSwitchItem({
     required this.label,
     required this.selected,
@@ -57,23 +64,63 @@ class _AuthSwitchItem extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
+  State<_AuthSwitchItem> createState() => _AuthSwitchItemState();
+}
+
+class _AuthSwitchItemState extends State<_AuthSwitchItem>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 320),
+      vsync: this,
+    );
+  }
+
+  @override
+  void didUpdateWidget(_AuthSwitchItem oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.selected != oldWidget.selected) {
+      if (widget.selected) {
+        _controller.forward();
+      } else {
+        _controller.reverse();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: widget.onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+        duration: const Duration(milliseconds: 320),
+        curve: Curves.easeOutCubic,
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: selected ? AppTheme.green : Colors.transparent,
-          borderRadius: BorderRadius.circular(999),
+          color: widget.selected ? AppTheme.green : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
         ),
         alignment: Alignment.center,
-        child: Text(
-          label,
+        child: AnimatedDefaultTextStyle(
+          duration: const Duration(milliseconds: 320),
+          curve: Curves.easeOutCubic,
           style: TextStyle(
-            color: selected ? Colors.white : AppTheme.green,
-            fontWeight: FontWeight.w500,
+            color: widget.selected ? Colors.white : AppTheme.green,
+            fontWeight: FontWeight.w700,
+            fontSize: 15,
+            letterSpacing: 0.3,
           ),
+          child: Text(widget.label),
         ),
       ),
     );
