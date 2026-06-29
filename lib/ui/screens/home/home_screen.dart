@@ -756,6 +756,65 @@ class _BalanceCardState extends State<_BalanceCard> {
   }
 }
 
+// Compact USD / KHR segmented toggle (light surface — used in top-up sheet).
+class _CurrencyToggle extends StatelessWidget {
+  const _CurrencyToggle({required this.showUsd, required this.onChanged});
+
+  final bool showUsd;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: AppTheme.green.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _segment('USD', showUsd, () => onChanged(true)),
+          _segment('Riel', !showUsd, () => onChanged(false)),
+        ],
+      ),
+    );
+  }
+
+  Widget _segment(String label, bool selected, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 9),
+        decoration: BoxDecoration(
+          color: selected ? AppTheme.green : Colors.transparent,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: AppTheme.green.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ]
+              : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: selected ? Colors.white : AppTheme.green,
+            letterSpacing: 0.3,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // Pulsing "Active" status badge with a soft green glow.
 class _ActiveBadge extends StatefulWidget {
   const _ActiveBadge();
@@ -1678,71 +1737,594 @@ class _TopUpAmountTile extends StatelessWidget {
   }
 }
 
-class _TopUpSheet extends StatelessWidget {
+class _TopUpSheet extends StatefulWidget {
   const _TopUpSheet({required this.parentContext});
 
   final BuildContext parentContext;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: context.cardColor,
-        borderRadius:
-            const BorderRadius.vertical(top: Radius.circular(28)),
+  State<_TopUpSheet> createState() => _TopUpSheetState();
+}
+
+// USD ↔ KHR exchange rate (matches CurrencyFormatter's default).
+const double _kRielRate = 4000.0;
+
+class _TopUpSheetState extends State<_TopUpSheet> {
+  final _customController = TextEditingController();
+  bool _showCustom = false;
+  bool _usd = true; // true → USD, false → Cambodian Riel
+  String? _error;
+
+  // Preset amounts, stored in USD as the base unit.
+  static const _presetsUsd = [5.0, 10.0, 20.0, 50.0];
+
+  @override
+  void dispose() {
+    _customController.dispose();
+    super.dispose();
+  }
+
+  String _label(double usd) =>
+      _usd ? '\$${usd.toStringAsFixed(2)}' : CurrencyFormatter.usdToKhr(usd);
+
+  void _setCurrency(bool usd) {
+    if (_usd == usd) return;
+    HapticFeedback.selectionClick();
+    setState(() {
+      _usd = usd;
+      _error = null;
+    });
+  }
+
+  // Close this sheet, then open payment-method selection.
+  // [amountUsd] is always in USD; [label] is shown in the chosen currency.
+  void _proceed(double amountUsd, String label) {
+    Navigator.pop(context);
+    showModalBottomSheet<void>(
+      context: widget.parentContext,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _TopUpPaymentSheet(
+        amount: amountUsd,
+        label: label,
+        onConfirm: (method) =>
+            _doTopUp(widget.parentContext, amountUsd, label, method),
       ),
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 12),
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: context.borderColor,
-              borderRadius: BorderRadius.circular(2),
+    );
+  }
+
+  void _toggleCustom() {
+    HapticFeedback.selectionClick();
+    setState(() => _showCustom = !_showCustom);
+  }
+
+  void _submitCustom() {
+    final raw = _customController.text.trim().replaceAll(RegExp(r'[^0-9.]'), '');
+    final entered = double.tryParse(raw);
+    if (entered == null || entered <= 0) {
+      setState(() => _error = 'Please enter a valid amount');
+      return;
+    }
+    // Normalise the entered value to USD.
+    final usd = _usd ? entered : entered / _kRielRate;
+    if (usd > 1000) {
+      setState(() => _error = _usd
+          ? 'Maximum top-up is \$1,000'
+          : 'Maximum top-up is ៛4,000,000');
+      return;
+    }
+    setState(() => _error = null);
+    _proceed(usd, _label(usd));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      // Lift the sheet above the keyboard when the custom field is focused.
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: context.cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: context.borderColor,
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            'Top Up Balance',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: context.textColor,
+            const SizedBox(height: 20),
+            Text(
+              'Top Up Balance',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: context.textColor,
+              ),
             ),
+            const SizedBox(height: 6),
+            Text(
+              'Select an amount to add to your wallet',
+              style: TextStyle(color: context.mutedColor, fontSize: 13),
+            ),
+            const SizedBox(height: 18),
+            // Currency option — USD or Cambodian Riel
+            _CurrencyToggle(showUsd: _usd, onChanged: _setCurrency),
+            const SizedBox(height: 20),
+            GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: 2,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 2.8,
+              children: _presetsUsd.map((usd) {
+                final label = _usd
+                    ? '\$${usd.toStringAsFixed(0)}'
+                    : CurrencyFormatter.usdToKhr(usd);
+                return _TopUpAmountTile(
+                  amount: label,
+                  onTap: () => _proceed(usd, _label(usd)),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 16),
+            // Custom amount — reveals an input field on tap.
+            AnimatedCrossFade(
+              duration: const Duration(milliseconds: 250),
+              crossFadeState: _showCustom
+                  ? CrossFadeState.showSecond
+                  : CrossFadeState.showFirst,
+              firstChild: SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _toggleCustom,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.green,
+                    side: const BorderSide(color: AppTheme.green, width: 1.5),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  icon: const Icon(Icons.edit_rounded, size: 18),
+                  label: const Text(
+                    'Enter Custom Amount',
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                  ),
+                ),
+              ),
+              secondChild: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: _customController,
+                    autofocus: true,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                    ],
+                    onSubmitted: (_) => _submitCustom(),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    decoration: InputDecoration(
+                      prefixIcon: _usd
+                          ? const Icon(
+                              Icons.attach_money_rounded,
+                              color: AppTheme.green,
+                            )
+                          : const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 18),
+                              child: Text(
+                                '៛',
+                                style: TextStyle(
+                                  color: AppTheme.green,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                      prefixIconConstraints: const BoxConstraints(
+                        minWidth: 0,
+                        minHeight: 0,
+                      ),
+                      hintText: _usd ? 'Enter amount in USD' : 'Enter amount in Riel',
+                      errorText: _error,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 16,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide(color: context.borderColor),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(
+                          color: AppTheme.green,
+                          width: 1.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SmartCanteenButton(
+                    label: 'Continue',
+                    onPressed: _submitCustom,
+                    radius: 14,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Top-up payment method selection ───────────────────────────────────────────
+
+class _TopUpMethod {
+  const _TopUpMethod({
+    required this.name,
+    required this.tagline,
+    required this.code,
+    required this.logo,
+    required this.brandColor,
+  });
+
+  final String name;
+  final String tagline;
+  final String code;
+  final String logo;
+  final Color brandColor;
+}
+
+const _kTopUpMethods = [
+  _TopUpMethod(
+    name: 'Bakong',
+    tagline: 'Secure QR payment via NBC Bakong',
+    code: 'Bakong',
+    logo: 'asset/payment method/bakong.png',
+    brandColor: Color(0xFFC62828),
+  ),
+  _TopUpMethod(
+    name: 'ABA Pay',
+    tagline: 'Instant transfer via ABA Mobile',
+    code: 'ABA',
+    logo: 'asset/payment method/aba.png',
+    brandColor: Color(0xFF1565C0),
+  ),
+  _TopUpMethod(
+    name: 'ACLEDA',
+    tagline: 'Secure payment via ACLEDA iTech',
+    code: 'ACLEDA',
+    logo: 'asset/payment method/acleda.png',
+    brandColor: Color(0xFF1A237E),
+  ),
+];
+
+class _TopUpPaymentSheet extends StatefulWidget {
+  const _TopUpPaymentSheet({
+    required this.amount,
+    required this.label,
+    required this.onConfirm,
+  });
+
+  final double amount;
+  final String label;
+  final void Function(String method) onConfirm;
+
+  @override
+  State<_TopUpPaymentSheet> createState() => _TopUpPaymentSheetState();
+}
+
+class _TopUpPaymentSheetState extends State<_TopUpPaymentSheet> {
+  int? _selected;
+
+  void _pick(int index) {
+    if (_selected == index) return;
+    HapticFeedback.selectionClick();
+    setState(() => _selected = index);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Container(
+        decoration: BoxDecoration(
+          color: context.cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: context.borderColor,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Choose Payment Method',
+                    style: TextStyle(
+                      fontSize: 19,
+                      fontWeight: FontWeight.w700,
+                      color: context.textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Select how you want to top up your wallet',
+                    style: TextStyle(fontSize: 12.5, color: context.mutedColor),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            // Top-up amount summary
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppTheme.green.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppTheme.green.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: AppTheme.green.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: const Icon(
+                      Icons.account_balance_wallet_rounded,
+                      size: 17,
+                      color: AppTheme.green,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Top-up Amount',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: context.mutedColor,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '\$${widget.amount.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.green,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            for (int i = 0; i < _kTopUpMethods.length; i++) ...[
+              _TopUpMethodCard(
+                method: _kTopUpMethods[i],
+                selected: _selected == i,
+                onTap: () => _pick(i),
+              ),
+              if (i < _kTopUpMethods.length - 1) const SizedBox(height: 10),
+            ],
+            const SizedBox(height: 24),
+            AnimatedOpacity(
+              opacity: _selected != null ? 1.0 : 0.4,
+              duration: const Duration(milliseconds: 250),
+              child: IgnorePointer(
+                ignoring: _selected == null,
+                child: SmartCanteenButton(
+                  label: 'Confirm Top Up',
+                  radius: 14,
+                  onPressed: () {
+                    Navigator.pop(context);
+                    widget.onConfirm(_kTopUpMethods[_selected!].code);
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TopUpMethodCard extends StatefulWidget {
+  const _TopUpMethodCard({
+    required this.method,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final _TopUpMethod method;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  State<_TopUpMethodCard> createState() => _TopUpMethodCardState();
+}
+
+class _TopUpMethodCardState extends State<_TopUpMethodCard> {
+  bool _pressing = false;
+
+  double get _scale {
+    if (_pressing) return 0.965;
+    return widget.selected ? 1.02 : 1.0;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final m = widget.method;
+    final sel = widget.selected;
+
+    return AnimatedScale(
+      scale: _scale,
+      duration: Duration(milliseconds: _pressing ? 80 : 280),
+      curve: _pressing ? Curves.easeOut : Curves.easeOutBack,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onTap,
+        onTapDown: (_) => setState(() => _pressing = true),
+        onTapUp: (_) => setState(() => _pressing = false),
+        onTapCancel: () => setState(() => _pressing = false),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 260),
+          curve: Curves.easeInOut,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+          decoration: BoxDecoration(
+            color: sel ? AppTheme.green.withValues(alpha: 0.04) : context.cardColor,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: sel ? AppTheme.green : context.borderColor,
+              width: sel ? 2.0 : 1.2,
+            ),
+            boxShadow: sel
+                ? [
+                    BoxShadow(
+                      color: AppTheme.green.withValues(alpha: 0.16),
+                      blurRadius: 18,
+                      offset: const Offset(0, 5),
+                    ),
+                  ]
+                : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            'Select an amount to add to your wallet',
-            style: TextStyle(color: context.mutedColor, fontSize: 13),
+          child: Row(
+            children: [
+              // Rounded logo from asset/payment method/
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: context.borderColor),
+                  boxShadow: [
+                    BoxShadow(
+                      color: m.brandColor.withValues(alpha: 0.18),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: ClipOval(
+                  child: Image.asset(
+                    m.logo,
+                    fit: BoxFit.cover,
+                    width: 50,
+                    height: 50,
+                    errorBuilder: (_, _, _) => Icon(
+                      Icons.account_balance_rounded,
+                      color: m.brandColor,
+                      size: 24,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AnimatedDefaultTextStyle(
+                      duration: const Duration(milliseconds: 220),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: sel ? AppTheme.green : context.textColor,
+                      ),
+                      child: Text(m.name),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      m.tagline,
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: context.mutedColor,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 220),
+                transitionBuilder: (child, anim) =>
+                    ScaleTransition(scale: anim, child: child),
+                child: sel
+                    ? Container(
+                        key: const ValueKey('check'),
+                        width: 26,
+                        height: 26,
+                        decoration: const BoxDecoration(
+                          color: AppTheme.green,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.check_rounded,
+                          size: 15,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Container(
+                        key: const ValueKey('arrow'),
+                        width: 26,
+                        height: 26,
+                        decoration: BoxDecoration(
+                          color: context.surfaceColor,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.chevron_right_rounded,
+                          size: 16,
+                          color: context.mutedColor,
+                        ),
+                      ),
+              ),
+            ],
           ),
-          const SizedBox(height: 24),
-          GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 2.8,
-            children: ['\$5', '\$10', '\$20', '\$50'].map((amt) {
-              return _TopUpAmountTile(
-                amount: amt,
-                onTap: () {
-                  final val = double.parse(amt.substring(1));
-                  Navigator.pop(context);
-                  _doTopUp(parentContext, val, amt);
-                },
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 16),
-          SmartCanteenButton(
-            label: 'Enter Custom Amount',
-            onPressed: () => Navigator.pop(context),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -1750,7 +2332,13 @@ class _TopUpSheet extends StatelessWidget {
 
 // ── Top-up async helpers ──────────────────────────────────────────────────────
 
-Future<void> _doTopUp(BuildContext ctx, double amount, String label) async {
+Future<void> _doTopUp(
+  BuildContext ctx,
+  double amount,
+  String label,
+  String method,
+) async {
+  HapticFeedback.mediumImpact();
   showDialog<void>(
     context: ctx,
     barrierDismissible: false,
@@ -1772,7 +2360,7 @@ Future<void> _doTopUp(BuildContext ctx, double amount, String label) async {
     OrderRecord(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       date: _formatNow(),
-      items: 'Wallet Top-up',
+      items: 'Wallet Top-up via $method',
       total: amount,
       status: success ? 'Completed' : 'Failed',
       type: 'deposit',
@@ -1794,7 +2382,7 @@ Future<void> _doTopUp(BuildContext ctx, double amount, String label) async {
           Expanded(
             child: Text(
               success
-                  ? '$label top-up successful!'
+                  ? '$label top-up via $method successful!'
                   : 'Top-up failed. Please try again.',
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
