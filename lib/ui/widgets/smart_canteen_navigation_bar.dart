@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../theme/app_theme.dart';
 
@@ -46,7 +47,10 @@ class SmartCanteenNavigationBarButton extends StatelessWidget {
               return Expanded(
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onTap: () => onTap(i),
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    onTap(i);
+                  },
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 6),
                     child: Column(
@@ -96,7 +100,10 @@ class SmartCanteenNavigationBarButton extends StatelessWidget {
             return Expanded(
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
-                onTap: () => onTap(i),
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  onTap(i);
+                },
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   child: Column(
@@ -104,12 +111,27 @@ class SmartCanteenNavigationBarButton extends StatelessWidget {
                     children: [
                       AnimatedContainer(
                         duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: isSelected
-                              ? AppTheme.green.withValues(alpha: 0.12)
-                              : Colors.transparent,
+                          // Soft gradient ring on the active tab
+                          gradient: isSelected
+                              ? LinearGradient(
+                                  colors: [
+                                    AppTheme.green.withValues(alpha: 0.18),
+                                    AppTheme.green.withValues(alpha: 0.08),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                )
+                              : null,
                           borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isSelected
+                                ? AppTheme.green.withValues(alpha: 0.4)
+                                : Colors.transparent,
+                            width: 1,
+                          ),
                           boxShadow: isSelected
                               ? [
                                   BoxShadow(
@@ -121,16 +143,29 @@ class SmartCanteenNavigationBarButton extends StatelessWidget {
                                 ]
                               : [],
                         ),
-                        child: Icon(
-                          _icons[i],
-                          size: 22,
-                          color:
-                              isSelected ? AppTheme.green : context.mutedColor,
+                        // Smooth icon color transition between states
+                        child: TweenAnimationBuilder<double>(
+                          tween: Tween<double>(
+                            begin: 0,
+                            end: isSelected ? 1 : 0,
+                          ),
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                          builder: (context, t, _) => Icon(
+                            _icons[i],
+                            size: 22,
+                            color: Color.lerp(
+                              context.mutedColor,
+                              AppTheme.green,
+                              t,
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 2),
-                      Text(
-                        _labels[i],
+                      AnimatedDefaultTextStyle(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: isSelected
@@ -138,6 +173,7 @@ class SmartCanteenNavigationBarButton extends StatelessWidget {
                               : FontWeight.w400,
                           color: isSelected ? AppTheme.green : context.mutedColor,
                         ),
+                        child: Text(_labels[i]),
                       ),
                       const SizedBox(height: 3),
                       AnimatedContainer(

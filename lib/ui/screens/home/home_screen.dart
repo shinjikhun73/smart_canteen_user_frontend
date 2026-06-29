@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../../models/cart_model.dart';
@@ -45,6 +46,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showTopUpSheet() {
+    HapticFeedback.mediumImpact();
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -61,6 +63,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showCheckoutSheet(BuildContext context) {
+    HapticFeedback.mediumImpact();
     final cart = CartProvider.of(context);
     final balanceState = context.read<BalanceState>();
     final orderHistory = context.read<OrderHistoryState>();
@@ -153,7 +156,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: _BalanceCard(
                       onTopUp: _showTopUpSheet,
-                      onQr: () => AppShellScope.maybeOf(context)?.setTab(2),
+                      onQr: () {
+                        HapticFeedback.mediumImpact();
+                        AppShellScope.maybeOf(context)?.setTab(2);
+                      },
                       onHistory: () => AppShellScope.maybeOf(context)?.setTab(3),
                     ),
                   ),
@@ -199,7 +205,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
 // ── Widgets ──────────────────────────────────────────────────────────────────
 
-class _Header extends StatelessWidget {
+class _Header extends StatefulWidget {
   const _Header({
     required this.greeting,
     required this.cartCount,
@@ -211,6 +217,87 @@ class _Header extends StatelessWidget {
   final int cartCount;
   final VoidCallback onCartTap;
   final VoidCallback onNotifTap;
+
+  @override
+  State<_Header> createState() => _HeaderState();
+}
+
+class _HeaderState extends State<_Header> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _fade;
+  late final Animation<Offset> _slide;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+    _fade = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+    _slide = Tween<Offset>(
+      begin: const Offset(0, 0.4),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _showProfileMenu() async {
+    HapticFeedback.selectionClick();
+    final box = context.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    final offset = box.localToGlobal(Offset.zero);
+    final selected = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        offset.dx + 20,
+        offset.dy + 70,
+        offset.dx + 200,
+        offset.dy + 200,
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      items: const [
+        PopupMenuItem(
+          value: 'profile',
+          child: Row(
+            children: [
+              Icon(Icons.person_outline, size: 20, color: AppTheme.green),
+              SizedBox(width: 12),
+              Text('My Profile'),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'settings',
+          child: Row(
+            children: [
+              Icon(Icons.settings_outlined, size: 20, color: AppTheme.green),
+              SizedBox(width: 12),
+              Text('Settings'),
+            ],
+          ),
+        ),
+      ],
+    );
+    if (!mounted) return;
+    if (selected == 'profile') {
+      AppShellScope.maybeOf(context)?.setTab(4);
+    } else if (selected == 'settings') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Settings — coming soon'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppTheme.green,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -229,68 +316,79 @@ class _Header extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
         child: Row(
           children: [
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF2E7D32), Color(0xFF4CAF50)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: AppTheme.green.withValues(alpha: 0.25),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
+            // Interactive avatar — tap to open quick menu
+            GestureDetector(
+              onTap: _showProfileMenu,
+              child: Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF2E7D32), Color(0xFF4CAF50)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                ],
-              ),
-              alignment: Alignment.center,
-              child: const Text(
-                'JD',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 16,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.green.withValues(alpha: 0.25),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                alignment: Alignment.center,
+                child: const Text(
+                  'JD',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                  ),
                 ),
               ),
             ),
             const SizedBox(width: 16),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    greeting,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w400,
-                      color: context.mutedColor,
-                      letterSpacing: 0.2,
-                    ),
+              child: FadeTransition(
+                opacity: _fade,
+                child: SlideTransition(
+                  position: _slide,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.greeting,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w400,
+                          color: context.mutedColor,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'John Doe',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: context.textColor,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'John Doe',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: context.textColor,
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
-            _ActionIcon(icon: Icons.notifications_outlined, onTap: onNotifTap),
+            _ActionIcon(
+                icon: Icons.notifications_outlined, onTap: widget.onNotifTap),
             const SizedBox(width: 8),
             Stack(
               clipBehavior: Clip.none,
               children: [
                 _ActionIcon(
-                    icon: Icons.shopping_bag_outlined, onTap: onCartTap),
-                if (cartCount > 0)
+                    icon: Icons.shopping_bag_outlined, onTap: widget.onCartTap),
+                if (widget.cartCount > 0)
                   Positioned(
                     right: -2,
                     top: -2,
@@ -310,7 +408,7 @@ class _Header extends StatelessWidget {
                       ),
                       alignment: Alignment.center,
                       child: Text(
-                        '$cartCount',
+                        '${widget.cartCount}',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 10,
@@ -343,31 +441,38 @@ class _ActionIconState extends State<_ActionIcon> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _isPressed = true),
-      onTapUp: (_) {
-        setState(() => _isPressed = false);
-        widget.onTap();
-      },
-      onTapCancel: () => setState(() => _isPressed = false),
-      child: AnimatedScale(
-        scale: _isPressed ? 0.92 : 1.0,
-        duration: const Duration(milliseconds: 80),
-        child: Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            color: context.cardColor,
+    return AnimatedScale(
+      scale: _isPressed ? 0.92 : 1.0,
+      duration: const Duration(milliseconds: 80),
+      child: Container(
+        width: 42,
+        height: 42,
+        decoration: BoxDecoration(
+          color: context.cardColor,
+          borderRadius: BorderRadius.circular(13),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 12,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
             borderRadius: BorderRadius.circular(13),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
-                blurRadius: 12,
-                offset: const Offset(0, 3),
-              ),
-            ],
+            splashColor: AppTheme.green.withValues(alpha: 0.12),
+            highlightColor: AppTheme.green.withValues(alpha: 0.06),
+            onTapDown: (_) => setState(() => _isPressed = true),
+            onTapCancel: () => setState(() => _isPressed = false),
+            onTap: () {
+              setState(() => _isPressed = false);
+              HapticFeedback.selectionClick();
+              widget.onTap();
+            },
+            child: Icon(widget.icon, size: 20, color: context.textColor),
           ),
-          child: Icon(widget.icon, size: 20, color: context.textColor),
         ),
       ),
     );
@@ -431,7 +536,7 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-class _BalanceCard extends StatelessWidget {
+class _BalanceCard extends StatefulWidget {
   const _BalanceCard({
     required this.onTopUp,
     required this.onQr,
@@ -443,11 +548,25 @@ class _BalanceCard extends StatelessWidget {
   final VoidCallback onHistory;
 
   @override
+  State<_BalanceCard> createState() => _BalanceCardState();
+}
+
+class _BalanceCardState extends State<_BalanceCard> {
+  bool _hidden = false;
+
+  void _toggleHidden() {
+    HapticFeedback.selectionClick();
+    setState(() => _hidden = !_hidden);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final balanceUsd = context.watch<BalanceState>().balanceUsd;
     final String khrText;
     final String usdText;
+    double? balanceData;
     if (balanceUsd case AsyncData<double>(:final data)) {
+      balanceData = data;
       khrText = CurrencyFormatter.usdToKhr(data);
       usdText = '≈ ${CurrencyFormatter.formatUSD(data)} USD';
     } else if (balanceUsd is AsyncError) {
@@ -535,45 +654,67 @@ class _BalanceCard extends StatelessWidget {
                     ],
                   ),
                   const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.15),
+                  const _ActiveBadge(),
+                  const SizedBox(width: 8),
+                  // Hide / unhide balance toggle
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
                       borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.circle,
-                            color: Color(0xFF69F0AE), size: 7),
-                        SizedBox(width: 5),
-                        Text(
-                          'Active',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                          ),
+                      onTap: _toggleHidden,
+                      child: Padding(
+                        padding: const EdgeInsets.all(6),
+                        child: Icon(
+                          _hidden
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                          color: Colors.white,
+                          size: 20,
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 22),
-              Text(
-                khrText,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 36,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.5,
-                ),
-              ),
+              // Animated number counter — smoothly tweens to the new balance
+              _hidden
+                  ? const Text(
+                      '៛ • • • • • •',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 36,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.5,
+                      ),
+                    )
+                  : balanceData != null
+                      ? TweenAnimationBuilder<double>(
+                          tween: Tween<double>(begin: 0, end: balanceData),
+                          duration: const Duration(milliseconds: 900),
+                          curve: Curves.easeInOut,
+                          builder: (context, value, _) => Text(
+                            CurrencyFormatter.usdToKhr(value),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 36,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                        )
+                      : Text(
+                          khrText,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 36,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
               const SizedBox(height: 5),
               Text(
-                usdText,
+                _hidden ? '≈ ••••• USD' : usdText,
                 style: const TextStyle(color: Colors.white60, fontSize: 13),
               ),
               const SizedBox(height: 22),
@@ -584,7 +725,7 @@ class _BalanceCard extends StatelessWidget {
                       label: 'Top Up',
                       icon: Icons.add_rounded,
                       isPrimary: true,
-                      onTap: onTopUp,
+                      onTap: widget.onTopUp,
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -593,7 +734,7 @@ class _BalanceCard extends StatelessWidget {
                       label: 'QR Pay',
                       icon: Icons.qr_code_2,
                       isPrimary: false,
-                      onTap: onQr,
+                      onTap: widget.onQr,
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -602,7 +743,7 @@ class _BalanceCard extends StatelessWidget {
                       label: 'History',
                       icon: Icons.receipt_long_rounded,
                       isPrimary: false,
-                      onTap: onHistory,
+                      onTap: widget.onHistory,
                     ),
                   ),
                 ],
@@ -615,7 +756,77 @@ class _BalanceCard extends StatelessWidget {
   }
 }
 
-class _BalanceBtn extends StatelessWidget {
+// Pulsing "Active" status badge with a soft green glow.
+class _ActiveBadge extends StatefulWidget {
+  const _ActiveBadge();
+
+  @override
+  State<_ActiveBadge> createState() => _ActiveBadgeState();
+}
+
+class _ActiveBadgeState extends State<_ActiveBadge>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _glow;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1400),
+      vsync: this,
+    )..repeat(reverse: true);
+    _glow = Tween<double>(begin: 0.2, end: 0.9).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _glow,
+      builder: (context, _) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF69F0AE).withValues(alpha: _glow.value),
+                blurRadius: 10,
+                spreadRadius: 0.5,
+              ),
+            ],
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.circle, color: Color(0xFF69F0AE), size: 7),
+              SizedBox(width: 5),
+              Text(
+                'Active',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _BalanceBtn extends StatefulWidget {
   const _BalanceBtn({
     required this.label,
     required this.icon,
@@ -629,39 +840,62 @@ class _BalanceBtn extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
+  State<_BalanceBtn> createState() => _BalanceBtnState();
+}
+
+class _BalanceBtnState extends State<_BalanceBtn> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
+    final isPrimary = widget.isPrimary;
     return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 44,
-        decoration: BoxDecoration(
-          color: isPrimary
-              ? Colors.white
-              : Colors.white.withValues(alpha: 0.13),
-          borderRadius: BorderRadius.circular(12),
-          border: isPrimary
-              ? null
-              : Border.all(color: Colors.white.withValues(alpha: 0.3)),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              size: 15,
-              color: isPrimary ? const Color(0xFF2E7D32) : Colors.white,
-            ),
-            const SizedBox(width: 5),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color:
-                    isPrimary ? const Color(0xFF2E7D32) : Colors.white,
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) {
+        setState(() => _pressed = false);
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? 0.95 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeInOut,
+        child: Container(
+          height: 44,
+          decoration: BoxDecoration(
+            color: isPrimary
+                ? Colors.white
+                : Colors.white.withValues(alpha: 0.13),
+            borderRadius: BorderRadius.circular(12),
+            border: isPrimary
+                ? null
+                : Border.all(color: Colors.white.withValues(alpha: 0.3)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Icon slides slightly when pressed
+              AnimatedSlide(
+                offset: _pressed ? const Offset(0.18, 0) : Offset.zero,
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeInOut,
+                child: Icon(
+                  widget.icon,
+                  size: 15,
+                  color: isPrimary ? const Color(0xFF2E7D32) : Colors.white,
+                ),
               ),
-            ),
-          ],
+              const SizedBox(width: 5),
+              Text(
+                widget.label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: isPrimary ? const Color(0xFF2E7D32) : Colors.white,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -702,10 +936,19 @@ class _MealPassCardState extends State<_MealPassCard> {
       child: AnimatedScale(
         scale: _isPressed ? 0.96 : 1.0,
         duration: const Duration(milliseconds: 100),
-        child: Container(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: widget.isActive ? AppTheme.green : context.cardColor,
+            color: widget.isActive ? null : context.cardColor,
+            gradient: widget.isActive
+                ? const LinearGradient(
+                    colors: [Color(0xFF2E7D32), Color(0xFF4CAF50)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : null,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
@@ -856,8 +1099,12 @@ class _PromoBanner extends StatefulWidget {
   State<_PromoBanner> createState() => _PromoBannerState();
 }
 
-class _PromoBannerState extends State<_PromoBanner> with SingleTickerProviderStateMixin {
+class _PromoBannerState extends State<_PromoBanner>
+    with TickerProviderStateMixin {
   late AnimationController _iconController;
+  late AnimationController _entranceController;
+  late Animation<double> _entranceFade;
+  late Animation<Offset> _entranceSlide;
 
   @override
   void initState() {
@@ -866,54 +1113,99 @@ class _PromoBannerState extends State<_PromoBanner> with SingleTickerProviderSta
       duration: const Duration(seconds: 2),
       vsync: this,
     )..repeat(reverse: true);
+    _entranceController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+    _entranceFade =
+        CurvedAnimation(parent: _entranceController, curve: Curves.easeInOut);
+    _entranceSlide = Tween<Offset>(
+      begin: const Offset(0, 0.15),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(parent: _entranceController, curve: Curves.easeOutCubic),
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _entranceController.forward();
+    });
   }
 
   @override
   void dispose() {
     _iconController.dispose();
+    _entranceController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF1B5E20), Color(0xFF43A047)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.green.withValues(alpha: 0.4),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+    return FadeTransition(
+      opacity: _entranceFade,
+      child: SlideTransition(
+        position: _entranceSlide,
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF1B5E20), Color(0xFF43A047)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.green.withValues(alpha: 0.4),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Row(
+          child: Row(
         children: [
           Expanded(
             flex: 3,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(8),
+                // Gently pulsing EXCLUSIVE badge
+                ScaleTransition(
+                  scale: Tween<double>(begin: 1.0, end: 1.06).animate(
+                    CurvedAnimation(
+                      parent: _iconController,
+                      curve: Curves.easeInOut,
+                    ),
                   ),
-                  child: const Text(
-                    '✨ EXCLUSIVE',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.5,
+                  alignment: Alignment.centerLeft,
+                  child: AnimatedBuilder(
+                    animation: _iconController,
+                    builder: (context, child) => Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.white.withValues(
+                              alpha: 0.15 + 0.25 * _iconController.value,
+                            ),
+                            blurRadius: 8,
+                            spreadRadius: 0.5,
+                          ),
+                        ],
+                      ),
+                      child: child,
+                    ),
+                    child: const Text(
+                      '✨ EXCLUSIVE',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.5,
+                      ),
                     ),
                   ),
                 ),
@@ -1008,7 +1300,9 @@ class _PromoBannerState extends State<_PromoBanner> with SingleTickerProviderSta
               ),
             ),
           ),
-        ],
+            ],
+          ),
+        ),
       ),
     );
   }
