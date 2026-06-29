@@ -59,15 +59,13 @@ class _SplashScreenState extends State<SplashScreen>
         curve: const Interval(0.40, 0.65, curve: Curves.easeIn),
       ),
     );
-    _titleSlide = Tween<Offset>(
-      begin: const Offset(0, 0.55),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _ctrl,
-        curve: const Interval(0.40, 0.65, curve: Curves.easeOut),
-      ),
-    );
+    _titleSlide = Tween<Offset>(begin: const Offset(0, 0.55), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _ctrl,
+            curve: const Interval(0.40, 0.65, curve: Curves.easeOut),
+          ),
+        );
 
     // Subtitle: fade + slide up (slightly delayed)
     _subtitleFade = Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -76,15 +74,13 @@ class _SplashScreenState extends State<SplashScreen>
         curve: const Interval(0.55, 0.78, curve: Curves.easeIn),
       ),
     );
-    _subtitleSlide = Tween<Offset>(
-      begin: const Offset(0, 0.55),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _ctrl,
-        curve: const Interval(0.55, 0.78, curve: Curves.easeOut),
-      ),
-    );
+    _subtitleSlide =
+        Tween<Offset>(begin: const Offset(0, 0.55), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _ctrl,
+            curve: const Interval(0.55, 0.78, curve: Curves.easeOut),
+          ),
+        );
 
     // Button: fade + slight slide up (last to appear)
     _buttonFade = Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -93,15 +89,13 @@ class _SplashScreenState extends State<SplashScreen>
         curve: const Interval(0.72, 1.0, curve: Curves.easeIn),
       ),
     );
-    _buttonSlide = Tween<Offset>(
-      begin: const Offset(0, 0.35),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _ctrl,
-        curve: const Interval(0.72, 1.0, curve: Curves.easeOut),
-      ),
-    );
+    _buttonSlide = Tween<Offset>(begin: const Offset(0, 0.35), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _ctrl,
+            curve: const Interval(0.72, 1.0, curve: Curves.easeOut),
+          ),
+        );
 
     _ctrl.forward();
   }
@@ -119,16 +113,14 @@ class _SplashScreenState extends State<SplashScreen>
         reverseTransitionDuration: const Duration(milliseconds: 300),
         pageBuilder: (_, _, _) => const SignInScreen(),
         transitionsBuilder: (_, animation, _, child) {
-          final fade = CurvedAnimation(
-            parent: animation,
-            curve: Curves.easeIn,
-          );
-          final slide = Tween<Offset>(
-            begin: const Offset(0, 0.06),
-            end: Offset.zero,
-          ).animate(
-            CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
-          );
+          final fade = CurvedAnimation(parent: animation, curve: Curves.easeIn);
+          final slide =
+              Tween<Offset>(
+                begin: const Offset(0, 0.06),
+                end: Offset.zero,
+              ).animate(
+                CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+              );
           return FadeTransition(
             opacity: fade,
             child: SlideTransition(position: slide, child: child),
@@ -204,9 +196,16 @@ class _SplashScreenState extends State<SplashScreen>
                       position: _buttonSlide,
                       child: SafeArea(
                         top: false,
-                        child: SmartCanteenButton(
-                          label: 'Get Started',
-                          onPressed: _navigateToSignIn,
+                        child: SizedBox(
+                          width: 180, // fixed smaller width
+                          child: SmartCanteenButton(
+                            label: 'Get Started',
+                            onPressed: _navigateToSignIn,
+                            height: 44, // smaller height
+                            radius:
+                                30, // optional: adjust corner radius for balance
+                            width: 180, // fixed smaller width
+                          ),
                         ),
                       ),
                     ),

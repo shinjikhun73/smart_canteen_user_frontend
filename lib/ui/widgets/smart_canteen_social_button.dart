@@ -69,7 +69,7 @@ class _SmartCanteenSocialButtonState extends State<SmartCanteenSocialButton>
                 height: 48,
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(18),
                   border: Border.all(
                     color: _borderColorAnimation.value ?? AppTheme.border,
                     width: 1.5,

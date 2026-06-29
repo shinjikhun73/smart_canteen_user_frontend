@@ -20,7 +20,7 @@ class SmartCanteenAuthSwitch extends StatelessWidget {
       padding: const EdgeInsets.all(5),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFFE8E8E8), width: 1.5),
         boxShadow: [
           BoxShadow(
@@ -108,7 +108,7 @@ class _AuthSwitchItemState extends State<_AuthSwitchItem>
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
           color: widget.selected ? AppTheme.green : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(16),
         ),
         alignment: Alignment.center,
         child: AnimatedDefaultTextStyle(

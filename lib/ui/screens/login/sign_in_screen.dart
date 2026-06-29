@@ -219,7 +219,16 @@ class _LoginForm extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 20),
-        SmartCanteenButton(label: 'Log In', onPressed: onLogin),
+        Center(
+          child: SmartCanteenButton(
+            label: 'Log In',
+            onPressed: onLogin,
+
+            width: 180,
+            radius: 30,
+            height: 44, // smaller height
+          ),
+        ),
         const SizedBox(height: 20),
         const SmartCanteenDividerText(label: 'OR CONTINUE WITH'),
         const SizedBox(height: 20),
@@ -284,7 +293,15 @@ class _SignUpForm extends StatelessWidget {
           prefixIcon: Icon(Icons.lock_outline, color: AppTheme.green, size: 20),
         ),
         const SizedBox(height: 20),
-        SmartCanteenButton(label: 'Sign Up', onPressed: onSignUp),
+        Center(
+          child: SmartCanteenButton(
+            label: 'Sign Up',
+            onPressed: onSignUp,
+            width: 180,
+            radius: 30,
+            height: 44, // smaller height
+          ),
+        ),
         const SizedBox(height: 20),
         const SmartCanteenDividerText(label: 'OR CONTINUE WITH'),
         const SizedBox(height: 20),

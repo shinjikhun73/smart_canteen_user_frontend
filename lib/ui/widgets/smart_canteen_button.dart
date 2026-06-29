@@ -10,8 +10,9 @@ class SmartCanteenButton extends StatefulWidget {
     this.fillColor = AppTheme.green,
     this.textColor = Colors.white,
     this.height = 52,
-    this.radius = 16,
+    this.radius = 30,
     this.leading,
+    this.width = double.infinity,
   });
 
   final String label;
@@ -21,6 +22,7 @@ class SmartCanteenButton extends StatefulWidget {
   final double height;
   final double radius;
   final Widget? leading;
+  final double width;
 
   @override
   State<SmartCanteenButton> createState() => _SmartCanteenButtonState();
@@ -63,7 +65,7 @@ class _SmartCanteenButtonState extends State<SmartCanteenButton>
       scale: _scaleAnimation,
       child: SizedBox(
         height: widget.height,
-        width: double.infinity,
+        width: widget.width,
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(widget.radius),
