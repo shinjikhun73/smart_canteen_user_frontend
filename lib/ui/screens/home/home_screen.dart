@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -90,8 +92,12 @@ class _HomeScreenState extends State<HomeScreen> {
               total: cart.total,
               status: 'Pending',
               session: 'Lunch',
-              imagePath: cart.entries.isNotEmpty ? cart.entries.first.item.imagePath : null,
-              colorSeed: cart.entries.isNotEmpty ? cart.entries.first.item.colorSeed : 0,
+              imagePath: cart.entries.isNotEmpty
+                  ? cart.entries.first.item.imagePath
+                  : null,
+              colorSeed: cart.entries.isNotEmpty
+                  ? cart.entries.first.item.colorSeed
+                  : 0,
             );
 
             orderHistory.addOrder(order);
@@ -148,7 +154,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   _Header(
                     greeting: _greeting,
                     cartCount: cart.totalItems,
-                    onCartTap: () => Navigator.pushNamed(context, '/order-summary'),
+                    onCartTap: () =>
+                        Navigator.pushNamed(context, '/order-summary'),
                     onNotifTap: () {},
                   ),
                   const SizedBox(height: 24),
@@ -160,7 +167,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         HapticFeedback.mediumImpact();
                         AppShellScope.maybeOf(context)?.setTab(2);
                       },
-                      onHistory: () => AppShellScope.maybeOf(context)?.setTab(3),
+                      onHistory: () =>
+                          AppShellScope.maybeOf(context)?.setTab(3),
                     ),
                   ),
                   const SizedBox(height: 32),
@@ -304,10 +312,7 @@ class _HeaderState extends State<_Header> with SingleTickerProviderStateMixin {
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            AppTheme.green.withValues(alpha: 0.08),
-            Colors.white,
-          ],
+          colors: [AppTheme.green.withValues(alpha: 0.08), Colors.white],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ),
@@ -381,13 +386,17 @@ class _HeaderState extends State<_Header> with SingleTickerProviderStateMixin {
               ),
             ),
             _ActionIcon(
-                icon: Icons.notifications_outlined, onTap: widget.onNotifTap),
+              icon: Icons.notifications_outlined,
+              onTap: widget.onNotifTap,
+            ),
             const SizedBox(width: 8),
             Stack(
               clipBehavior: Clip.none,
               children: [
                 _ActionIcon(
-                    icon: Icons.shopping_bag_outlined, onTap: widget.onCartTap),
+                  icon: Icons.shopping_bag_outlined,
+                  onTap: widget.onCartTap,
+                ),
                 if (widget.cartCount > 0)
                   Positioned(
                     right: -2,
@@ -400,7 +409,9 @@ class _HeaderState extends State<_Header> with SingleTickerProviderStateMixin {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFFE53935).withValues(alpha: 0.4),
+                            color: const Color(
+                              0xFFE53935,
+                            ).withValues(alpha: 0.4),
                             blurRadius: 6,
                             offset: const Offset(0, 2),
                           ),
@@ -648,8 +659,7 @@ class _BalanceCardState extends State<_BalanceCard> {
                       ),
                       Text(
                         'CADT Scholar',
-                        style:
-                            TextStyle(color: Colors.white60, fontSize: 11),
+                        style: TextStyle(color: Colors.white60, fontSize: 11),
                       ),
                     ],
                   ),
@@ -689,29 +699,29 @@ class _BalanceCardState extends State<_BalanceCard> {
                       ),
                     )
                   : balanceData != null
-                      ? TweenAnimationBuilder<double>(
-                          tween: Tween<double>(begin: 0, end: balanceData),
-                          duration: const Duration(milliseconds: 900),
-                          curve: Curves.easeInOut,
-                          builder: (context, value, _) => Text(
-                            CurrencyFormatter.usdToKhr(value),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 36,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.5,
-                            ),
-                          ),
-                        )
-                      : Text(
-                          khrText,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 36,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.5,
-                          ),
+                  ? TweenAnimationBuilder<double>(
+                      tween: Tween<double>(begin: 0, end: balanceData),
+                      duration: const Duration(milliseconds: 900),
+                      curve: Curves.easeInOut,
+                      builder: (context, value, _) => Text(
+                        CurrencyFormatter.usdToKhr(value),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 36,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.5,
                         ),
+                      ),
+                    )
+                  : Text(
+                      khrText,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 36,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
               const SizedBox(height: 5),
               Text(
                 _hidden ? '≈ ••••• USD' : usdText,
@@ -835,9 +845,10 @@ class _ActiveBadgeState extends State<_ActiveBadge>
       duration: const Duration(milliseconds: 1400),
       vsync: this,
     )..repeat(reverse: true);
-    _glow = Tween<double>(begin: 0.2, end: 0.9).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _glow = Tween<double>(
+      begin: 0.2,
+      end: 0.9,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -1052,7 +1063,9 @@ class _MealPassCardState extends State<_MealPassCard> {
                   Icon(
                     Icons.qr_code_2,
                     size: 18,
-                    color: widget.isActive ? Colors.white60 : context.mutedColor,
+                    color: widget.isActive
+                        ? Colors.white60
+                        : context.mutedColor,
                   ),
                 ],
               ),
@@ -1076,7 +1089,10 @@ class _MealPassCardState extends State<_MealPassCard> {
               ),
               const SizedBox(height: 12),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: widget.isActive
                       ? Colors.white.withValues(alpha: 0.2)
@@ -1090,9 +1106,7 @@ class _MealPassCardState extends State<_MealPassCard> {
                       width: 6,
                       height: 6,
                       decoration: BoxDecoration(
-                        color: widget.isActive
-                            ? Colors.white
-                            : AppTheme.green,
+                        color: widget.isActive ? Colors.white : AppTheme.green,
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -1176,14 +1190,17 @@ class _PromoBannerState extends State<_PromoBanner>
       duration: const Duration(milliseconds: 600),
       vsync: this,
     );
-    _entranceFade =
-        CurvedAnimation(parent: _entranceController, curve: Curves.easeInOut);
-    _entranceSlide = Tween<Offset>(
-      begin: const Offset(0, 0.15),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _entranceController, curve: Curves.easeOutCubic),
+    _entranceFade = CurvedAnimation(
+      parent: _entranceController,
+      curve: Curves.easeInOut,
     );
+    _entranceSlide =
+        Tween<Offset>(begin: const Offset(0, 0.15), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _entranceController,
+            curve: Curves.easeOutCubic,
+          ),
+        );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _entranceController.forward();
     });
@@ -1203,13 +1220,7 @@ class _PromoBannerState extends State<_PromoBanner>
       child: SlideTransition(
         position: _entranceSlide,
         child: Container(
-          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF1B5E20), Color(0xFF43A047)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
@@ -1219,147 +1230,205 @@ class _PromoBannerState extends State<_PromoBanner>
               ),
             ],
           ),
-          child: Row(
-        children: [
-          Expanded(
-            flex: 3,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: Stack(
               children: [
-                // Gently pulsing EXCLUSIVE badge
-                ScaleTransition(
-                  scale: Tween<double>(begin: 1.0, end: 1.06).animate(
-                    CurvedAnimation(
-                      parent: _iconController,
-                      curve: Curves.easeInOut,
-                    ),
+                // ── Sharp food photo (revealed on the right) ─────────────────
+                Positioned.fill(
+                  child: Image.asset(
+                    'asset/foods/exlusive.png',
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) =>
+                        const ColoredBox(color: Color(0xFF2E7D32)),
                   ),
-                  alignment: Alignment.centerLeft,
-                  child: AnimatedBuilder(
-                    animation: _iconController,
-                    builder: (context, child) => Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(8),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.white.withValues(
-                              alpha: 0.15 + 0.25 * _iconController.value,
-                            ),
-                            blurRadius: 8,
-                            spreadRadius: 0.5,
-                          ),
-                        ],
-                      ),
-                      child: child,
-                    ),
-                    child: const Text(
-                      '✨ EXCLUSIVE',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1.5,
+                ),
+                // ── Blurred copy, faded out left→right (blur 4 → 0) ──────────
+                Positioned.fill(
+                  child: ShaderMask(
+                    blendMode: BlendMode.dstIn,
+                    shaderCallback: (rect) => const LinearGradient(
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                      colors: [Colors.white, Colors.transparent],
+                      stops: [0.35, 1.0],
+                    ).createShader(rect),
+                    child: ImageFiltered(
+                      imageFilter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+                      child: Image.asset(
+                        'asset/foods/exlusive.png',
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) =>
+                            const ColoredBox(color: Color(0xFF2E7D32)),
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 12),
-                const Text(
-                  'Fresh Daily\nCampus Food',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 18,
-                    height: 1.2,
-                    letterSpacing: -0.3,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  '20% off for CADT Scholars\nthis week only',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
-                    height: 1.5,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                GestureDetector(
-                  onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('✓ Discount coupon applied!'),
-                      behavior: SnackBarBehavior.floating,
-                      backgroundColor: Color(0xFF1B5E20),
-                      duration: Duration(seconds: 2),
-                    ),
-                  ),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 11),
+                // ── Green gradient overlay (dark TL → light BR) ──────────────
+                Positioned.fill(
+                  child: DecoratedBox(
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.15),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: const Text(
-                      'Claim Now',
-                      style: TextStyle(
-                        color: Color(0xFF1B5E20),
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
-                        letterSpacing: 0.3,
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFF1B5E20).withValues(alpha: 0.92),
+                          const Color(0xFF43A047).withValues(alpha: 0.72),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
                     ),
+                  ),
+                ),
+                // ── Content ──────────────────────────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Pill-shaped EXCLUSIVE badge with star (gently pulsing)
+                      ScaleTransition(
+                        scale: Tween<double>(begin: 1.0, end: 1.06).animate(
+                          CurvedAnimation(
+                            parent: _iconController,
+                            curve: Curves.easeInOut,
+                          ),
+                        ),
+                        alignment: Alignment.centerLeft,
+                        child: AnimatedBuilder(
+                          animation: _iconController,
+                          builder: (context, child) => Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.22),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.35),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.white.withValues(
+                                    alpha: 0.12 + 0.22 * _iconController.value,
+                                  ),
+                                  blurRadius: 8,
+                                  spreadRadius: 0.5,
+                                ),
+                              ],
+                            ),
+                            child: child,
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.star_rounded,
+                                color: Colors.white,
+                                size: 13,
+                              ),
+                              SizedBox(width: 5),
+                              Text(
+                                'EXCLUSIVE',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 1.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      // Headline
+                      const Text(
+                        'Fresh Daily Campus Food',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 22,
+                          height: 1.2,
+                          letterSpacing: -0.3,
+                          shadows: [
+                            Shadow(
+                              color: Color(0x66000000),
+                              blurRadius: 8,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      // Subtext
+                      const Text(
+                        '20% off for CADT Scholars this week only',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 13,
+                          height: 1.5,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      // Pill-shaped Claim Now button
+                      GestureDetector(
+                        onTap: () {
+                          HapticFeedback.lightImpact();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Discount coupon applied!'),
+                              behavior: SnackBarBehavior.floating,
+                              backgroundColor: Color(0xFF1B5E20),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(24),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.18),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Claim Now',
+                                style: TextStyle(
+                                  color: Color(0xFF1B5E20),
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 14,
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                              SizedBox(width: 6),
+                              Icon(
+                                Icons.arrow_forward_rounded,
+                                color: Color(0xFF1B5E20),
+                                size: 16,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            flex: 2,
-            child: Container(
-              height: 140,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.white.withValues(alpha: 0.1),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  ScaleTransition(
-                    scale: Tween<double>(begin: 1.0, end: 1.08)
-                        .animate(_iconController),
-                    child: const Icon(
-                      Icons.ramen_dining_rounded,
-                      color: Colors.white,
-                      size: 70,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-            ],
           ),
         ),
       ),
@@ -1404,9 +1473,7 @@ class _MenuFilterChipState extends State<_MenuFilterChip> {
             color: widget.isSelected ? AppTheme.green : Colors.transparent,
             borderRadius: BorderRadius.circular(22),
             border: Border.all(
-              color: widget.isSelected
-                  ? AppTheme.green
-                  : context.borderColor,
+              color: widget.isSelected ? AppTheme.green : context.borderColor,
               width: widget.isSelected ? 0 : 1.2,
             ),
             boxShadow: widget.isSelected
@@ -1551,7 +1618,8 @@ class _FoodCardState extends State<_FoodCard> {
                   children: [
                     ClipRRect(
                       borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(20)),
+                        top: Radius.circular(20),
+                      ),
                       child: _FoodThumbnail(item: widget.item),
                     ),
                     Positioned(
@@ -1559,10 +1627,13 @@ class _FoodCardState extends State<_FoodCard> {
                       right: 8,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFFB74D).withValues(
-                              alpha: 0.95),
+                          color: const Color(
+                            0xFFFFB74D,
+                          ).withValues(alpha: 0.95),
                           borderRadius: BorderRadius.circular(8),
                           boxShadow: [
                             BoxShadow(
@@ -1575,8 +1646,11 @@ class _FoodCardState extends State<_FoodCard> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.star_rounded,
-                                color: Colors.white, size: 14),
+                            const Icon(
+                              Icons.star_rounded,
+                              color: Colors.white,
+                              size: 14,
+                            ),
                             const SizedBox(width: 3),
                             Text(
                               widget.item.rating.toStringAsFixed(1),
@@ -1641,8 +1715,11 @@ class _FoodCardState extends State<_FoodCard> {
                         child: const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.add_rounded,
-                                color: Colors.white, size: 16),
+                            Icon(
+                              Icons.add_rounded,
+                              color: Colors.white,
+                              size: 16,
+                            ),
                             SizedBox(width: 4),
                             Text(
                               'Add',
@@ -1700,8 +1777,11 @@ class _FoodThumbnail extends StatelessWidget {
         ),
       ),
       child: Center(
-        child: Icon(kFoodIcons[idx % kFoodIcons.length],
-            color: AppTheme.green, size: 52),
+        child: Icon(
+          kFoodIcons[idx % kFoodIcons.length],
+          color: AppTheme.green,
+          size: 52,
+        ),
       ),
     );
   }
@@ -1799,7 +1879,10 @@ class _TopUpSheetState extends State<_TopUpSheet> {
   }
 
   void _submitCustom() {
-    final raw = _customController.text.trim().replaceAll(RegExp(r'[^0-9.]'), '');
+    final raw = _customController.text.trim().replaceAll(
+      RegExp(r'[^0-9.]'),
+      '',
+    );
     final entered = double.tryParse(raw);
     if (entered == null || entered <= 0) {
       setState(() => _error = 'Please enter a valid amount');
@@ -1808,9 +1891,11 @@ class _TopUpSheetState extends State<_TopUpSheet> {
     // Normalise the entered value to USD.
     final usd = _usd ? entered : entered / _kRielRate;
     if (usd > 1000) {
-      setState(() => _error = _usd
-          ? 'Maximum top-up is \$1,000'
-          : 'Maximum top-up is ៛4,000,000');
+      setState(
+        () => _error = _usd
+            ? 'Maximum top-up is \$1,000'
+            : 'Maximum top-up is ៛4,000,000',
+      );
       return;
     }
     setState(() => _error = null);
@@ -1941,7 +2026,9 @@ class _TopUpSheetState extends State<_TopUpSheet> {
                         minWidth: 0,
                         minHeight: 0,
                       ),
-                      hintText: _usd ? 'Enter amount in USD' : 'Enter amount in Riel',
+                      hintText: _usd
+                          ? 'Enter amount in USD'
+                          : 'Enter amount in Riel',
                       errorText: _error,
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16,
@@ -2093,7 +2180,9 @@ class _TopUpPaymentSheetState extends State<_TopUpPaymentSheet> {
               decoration: BoxDecoration(
                 color: AppTheme.green.withValues(alpha: 0.06),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AppTheme.green.withValues(alpha: 0.2)),
+                border: Border.all(
+                  color: AppTheme.green.withValues(alpha: 0.2),
+                ),
               ),
               child: Row(
                 children: [
@@ -2207,7 +2296,9 @@ class _TopUpMethodCardState extends State<_TopUpMethodCard> {
           curve: Curves.easeInOut,
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
           decoration: BoxDecoration(
-            color: sel ? AppTheme.green.withValues(alpha: 0.04) : context.cardColor,
+            color: sel
+                ? AppTheme.green.withValues(alpha: 0.04)
+                : context.cardColor,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: sel ? AppTheme.green : context.borderColor,
@@ -2424,8 +2515,10 @@ class _ProcessingDialogState extends State<_ProcessingDialog>
       vsync: this,
       duration: const Duration(milliseconds: 900),
     )..repeat(reverse: true);
-    _scale = Tween<double>(begin: 0.88, end: 1.12)
-        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+    _scale = Tween<double>(
+      begin: 0.88,
+      end: 1.12,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
   }
 
   @override
