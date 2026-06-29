@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../../models/cart_model.dart';
@@ -8,6 +9,8 @@ import '../../../ui/states/balance_state.dart';
 import '../../../ui/states/order_history_state.dart';
 import '../../widgets/cart_bar.dart';
 import '../../widgets/payment_method_sheet.dart';
+
+enum _SortBy { recommended, priceLowHigh, priceHighLow, rating }
 
 class MenuScreen extends StatefulWidget {
   const MenuScreen({super.key});
@@ -22,19 +25,64 @@ class _MenuScreenState extends State<MenuScreen> {
   int _selectedFilter = 0;
   String _search = '';
   String? _expandedItemId;
+  _SortBy _sortBy = _SortBy.recommended;
+  final ScrollController _scrollController = ScrollController();
 
   static const _filters = ['All', 'Breakfast', 'Lunch', 'Drinks'];
   static const _cats = ['', 'breakfast', 'lunch', 'drinks'];
 
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
   List<FoodItem> get _visibleItems {
     final cat = _cats[_selectedFilter];
-    return kMenuItems.where((f) {
+    final list = kMenuItems.where((f) {
       final matchCat = cat.isEmpty || f.category == cat;
       final matchSearch =
           _search.isEmpty ||
           f.name.toLowerCase().contains(_search.toLowerCase());
       return matchCat && matchSearch;
     }).toList();
+
+    switch (_sortBy) {
+      case _SortBy.priceLowHigh:
+        list.sort((a, b) => a.price.compareTo(b.price));
+      case _SortBy.priceHighLow:
+        list.sort((a, b) => b.price.compareTo(a.price));
+      case _SortBy.rating:
+        list.sort((a, b) => b.rating.compareTo(a.rating));
+      case _SortBy.recommended:
+        break;
+    }
+    return list;
+  }
+
+  void _onFilterChanged(int i) {
+    HapticFeedback.selectionClick();
+    setState(() => _selectedFilter = i);
+    // Smoothly scroll back to the top when switching categories.
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  void _showSortMenu() {
+    HapticFeedback.selectionClick();
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _SortSheet(
+        current: _sortBy,
+        onSelected: (s) => setState(() => _sortBy = s),
+      ),
+    );
   }
 
   void _showCheckoutSheet(BuildContext context) {
@@ -205,51 +253,10 @@ class _MenuScreenState extends State<MenuScreen> {
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: context.cardColor,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 12,
-                        offset: const Offset(0, 3),
-                      ),
-                      BoxShadow(
-                        color: AppTheme.green.withValues(alpha: 0.06),
-                        blurRadius: 6,
-                        offset: const Offset(0, 1),
-                      ),
-                    ],
-                  ),
-                  child: TextField(
-                    onChanged: (v) => setState(() => _search = v),
-                    decoration: InputDecoration(
-                      hintText: 'Find your favorite food',
-                      hintStyle: TextStyle(
-                        color: context.mutedColor,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w400,
-                      ),
-                      prefixIcon: Padding(
-                        padding: const EdgeInsets.only(left: 14, right: 10),
-                        child: Icon(
-                          Icons.search_rounded,
-                          color: context.mutedColor,
-                          size: 20,
-                        ),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                    ),
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: context.textColor,
-                    ),
-                  ),
+                child: _SearchBar(
+                  onChanged: (v) => setState(() => _search = v),
+                  onFilterTap: _showSortMenu,
+                  isSortActive: _sortBy != _SortBy.recommended,
                 ),
               ),
               const SizedBox(height: 8),
@@ -263,7 +270,7 @@ class _MenuScreenState extends State<MenuScreen> {
                       child: _ModernFilterChip(
                         label: _filters[i],
                         isSelected: _selectedFilter == i,
-                        onTap: () => setState(() => _selectedFilter = i),
+                        onTap: () => _onFilterChanged(i),
                       ),
                     );
                   }),
@@ -311,21 +318,28 @@ class _MenuScreenState extends State<MenuScreen> {
                         ),
                       )
                     : ListView.builder(
+                        controller: _scrollController,
                         padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
                         itemCount: items.length,
                         itemBuilder: (context, index) {
                           final item = items[index];
                           final isExpanded = _expandedItemId == item.id;
-                          return Consumer<CartModel>(
-                            builder: (context, _, _) {
-                              return FoodItemCard(
-                                item: item,
-                                isExpanded: isExpanded,
-                                onTap: () => setState(() {
-                                  _expandedItemId = isExpanded ? null : item.id;
-                                }),
-                              );
-                            },
+                          return _FadeInItem(
+                            // Re-key per filter+item so the fade replays on switch.
+                            key: ValueKey('${_selectedFilter}_${item.id}'),
+                            index: index,
+                            child: Consumer<CartModel>(
+                              builder: (context, _, _) {
+                                return FoodItemCard(
+                                  item: item,
+                                  isExpanded: isExpanded,
+                                  onTap: () => setState(() {
+                                    _expandedItemId =
+                                        isExpanded ? null : item.id;
+                                  }),
+                                );
+                              },
+                            ),
                           );
                         },
                       ),
@@ -521,7 +535,7 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.star_rounded, color: Colors.white, size: 13),
+                                const _ShimmerStar(size: 13),
                                 const SizedBox(width: 3),
                                 Text(
                                   widget.item.rating.toStringAsFixed(1),
@@ -585,13 +599,24 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
                                   width: 0.8,
                                 ),
                               ),
-                              child: Text(
-                                tag,
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: _getTagColor(tag),
-                                  fontWeight: FontWeight.w600,
-                                ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    _tagIcon(tag),
+                                    size: 11,
+                                    color: _getTagColor(tag),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    tag,
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: _getTagColor(tag),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
                               ),
                             );
                           }).toList(),
@@ -610,29 +635,7 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
                               ),
                             ),
                             if (_getCartQuantity() == 0)
-                              GestureDetector(
-                                onTap: _addItem,
-                                child: Container(
-                                  width: 40,
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.green,
-                                    borderRadius: BorderRadius.circular(12),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: AppTheme.green.withValues(alpha: 0.3),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 3),
-                                      ),
-                                    ],
-                                  ),
-                                  child: const Icon(
-                                    Icons.add_rounded,
-                                    color: Colors.white,
-                                    size: 20,
-                                  ),
-                                ),
-                              )
+                              _BounceAddButton(onTap: _addItem)
                             else
                               Container(
                                 decoration: BoxDecoration(
@@ -816,7 +819,7 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.star_rounded, color: Colors.white, size: 16),
+                        const _ShimmerStar(size: 16),
                         const SizedBox(width: 4),
                         Text(
                           widget.item.rating.toStringAsFixed(1),
@@ -880,13 +883,24 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
                             width: 1,
                           ),
                         ),
-                        child: Text(
-                          tag,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: _getTagColor(tag),
-                            fontWeight: FontWeight.w700,
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              _tagIcon(tag),
+                              size: 13,
+                              color: _getTagColor(tag),
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              tag,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: _getTagColor(tag),
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
                         ),
                       );
                     }).toList(),
@@ -923,28 +937,11 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
                         ],
                       ),
                       if (_getCartQuantity() == 0)
-                        GestureDetector(
+                        _BounceAddButton(
                           onTap: _addItem,
-                          child: Container(
-                            width: 56,
-                            height: 56,
-                            decoration: BoxDecoration(
-                              color: AppTheme.green,
-                              borderRadius: BorderRadius.circular(14),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppTheme.green.withValues(alpha: 0.4),
-                                  blurRadius: 12,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: const Icon(
-                              Icons.add_rounded,
-                              color: Colors.white,
-                              size: 28,
-                            ),
-                          ),
+                          size: 56,
+                          iconSize: 28,
+                          radius: 14,
                         )
                       else
                         Container(
@@ -1366,6 +1363,504 @@ class _ModernFilterChipState extends State<_ModernFilterChip> {
               fontWeight: FontWeight.w700,
               color: widget.isSelected ? Colors.white : context.mutedColor,
               letterSpacing: 0.3,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Animated search bar with filter/sort button ───────────────────────────────
+
+class _SearchBar extends StatefulWidget {
+  const _SearchBar({
+    required this.onChanged,
+    required this.onFilterTap,
+    required this.isSortActive,
+  });
+
+  final ValueChanged<String> onChanged;
+  final VoidCallback onFilterTap;
+  final bool isSortActive;
+
+  @override
+  State<_SearchBar> createState() => _SearchBarState();
+}
+
+class _SearchBarState extends State<_SearchBar> {
+  final FocusNode _focusNode = FocusNode();
+  bool _focused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(() {
+      setState(() => _focused = _focusNode.hasFocus);
+    });
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        // Search field — grows/elevates and shows a green border when focused.
+        Expanded(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            decoration: BoxDecoration(
+              color: context.cardColor,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: _focused
+                    ? AppTheme.green.withValues(alpha: 0.6)
+                    : Colors.transparent,
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: _focused
+                      ? AppTheme.green.withValues(alpha: 0.18)
+                      : Colors.black.withValues(alpha: 0.04),
+                  blurRadius: _focused ? 16 : 12,
+                  offset: Offset(0, _focused ? 5 : 3),
+                ),
+              ],
+            ),
+            child: TextField(
+              focusNode: _focusNode,
+              onChanged: widget.onChanged,
+              decoration: InputDecoration(
+                hintText: 'Find your favorite food',
+                hintStyle: TextStyle(
+                  color: context.mutedColor,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                ),
+                prefixIcon: Padding(
+                  padding: const EdgeInsets.only(left: 14, right: 10),
+                  child: AnimatedScale(
+                    scale: _focused ? 1.15 : 1.0,
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                    child: Icon(
+                      Icons.search_rounded,
+                      color: _focused ? AppTheme.green : context.mutedColor,
+                      size: 20,
+                    ),
+                  ),
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+              ),
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: context.textColor,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        // Sort / filter button
+        GestureDetector(
+          onTap: widget.onFilterTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              gradient: widget.isSortActive
+                  ? const LinearGradient(
+                      colors: [Color(0xFF1B5E20), Color(0xFF43A047)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    )
+                  : null,
+              color: widget.isSortActive ? null : context.cardColor,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: widget.isSortActive
+                      ? AppTheme.green.withValues(alpha: 0.35)
+                      : Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 12,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Icon(
+              Icons.tune_rounded,
+              size: 22,
+              color: widget.isSortActive ? Colors.white : context.textColor,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Sort options bottom sheet ─────────────────────────────────────────────────
+
+class _SortSheet extends StatelessWidget {
+  const _SortSheet({required this.current, required this.onSelected});
+
+  final _SortBy current;
+  final ValueChanged<_SortBy> onSelected;
+
+  static const _options = [
+    (_SortBy.recommended, 'Recommended', Icons.auto_awesome_rounded),
+    (_SortBy.priceLowHigh, 'Price: Low to High', Icons.arrow_upward_rounded),
+    (_SortBy.priceHighLow, 'Price: High to Low', Icons.arrow_downward_rounded),
+    (_SortBy.rating, 'Top Rated', Icons.star_rounded),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Container(
+        decoration: BoxDecoration(
+          color: context.cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: context.borderColor,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              'Sort By',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: context.textColor,
+              ),
+            ),
+            const SizedBox(height: 12),
+            for (final (value, label, icon) in _options)
+              _SortTile(
+                label: label,
+                icon: icon,
+                selected: current == value,
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  onSelected(value);
+                  Navigator.pop(context);
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SortTile extends StatelessWidget {
+  const _SortTile({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          color: selected
+              ? AppTheme.green.withValues(alpha: 0.1)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: selected ? AppTheme.green : context.borderColor,
+            width: selected ? 1.5 : 1.2,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 20,
+              color: selected ? AppTheme.green : context.mutedColor,
+            ),
+            const SizedBox(width: 12),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                color: selected ? AppTheme.green : context.textColor,
+              ),
+            ),
+            const Spacer(),
+            if (selected)
+              const Icon(Icons.check_circle_rounded,
+                  color: AppTheme.green, size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Staggered fade-in wrapper for list items ──────────────────────────────────
+
+class _FadeInItem extends StatefulWidget {
+  const _FadeInItem({
+    super.key,
+    required this.index,
+    required this.child,
+  });
+
+  final int index;
+  final Widget child;
+
+  @override
+  State<_FadeInItem> createState() => _FadeInItemState();
+}
+
+class _FadeInItemState extends State<_FadeInItem>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _fade;
+  late final Animation<Offset> _slide;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 400),
+      vsync: this,
+    );
+    _fade = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+    _slide = Tween<Offset>(
+      begin: const Offset(0, 0.12),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+    // Stagger by index, capped so long lists don't lag.
+    final delay = Duration(milliseconds: 60 * (widget.index.clamp(0, 8)));
+    Future.delayed(delay, () {
+      if (mounted) _controller.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _fade,
+      child: SlideTransition(position: _slide, child: widget.child),
+    );
+  }
+}
+
+// ── Tag icon mapping ──────────────────────────────────────────────────────────
+
+IconData _tagIcon(String tag) {
+  switch (tag) {
+    case 'Soup':
+      return Icons.ramen_dining_rounded;
+    case 'Traditional':
+      return Icons.rice_bowl_rounded;
+    case 'Sweet':
+      return Icons.cake_rounded;
+    case 'Spicy':
+      return Icons.local_fire_department_rounded;
+    case 'Healthy':
+      return Icons.eco_rounded;
+    case 'Vegan':
+      return Icons.spa_rounded;
+    case 'Drink':
+      return Icons.local_cafe_rounded;
+    case 'Grilled':
+      return Icons.outdoor_grill_rounded;
+    case 'Soft':
+      return Icons.bubble_chart_rounded;
+    case 'Simple':
+      return Icons.restaurant_rounded;
+    case 'Quick':
+      return Icons.bolt_rounded;
+    case 'Cold':
+      return Icons.ac_unit_rounded;
+    case 'Fresh':
+      return Icons.grass_rounded;
+    default:
+      return Icons.label_rounded;
+  }
+}
+
+// ── Shimmering rating star ─────────────────────────────────────────────────────
+
+class _ShimmerStar extends StatefulWidget {
+  const _ShimmerStar({this.size = 13});
+
+  final double size;
+
+  @override
+  State<_ShimmerStar> createState() => _ShimmerStarState();
+}
+
+class _ShimmerStarState extends State<_ShimmerStar>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1600),
+      vsync: this,
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        // Gentle shimmer — scale + brightness pulse.
+        final t = Curves.easeInOut.transform(_controller.value);
+        return Transform.scale(
+          scale: 1.0 + 0.12 * t,
+          child: Icon(
+            Icons.star_rounded,
+            color: Color.lerp(Colors.white, const Color(0xFFFFF3D6), t),
+            size: widget.size,
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ── Bouncing add (+) button with ripple ───────────────────────────────────────
+
+class _BounceAddButton extends StatefulWidget {
+  const _BounceAddButton({
+    required this.onTap,
+    this.size = 40,
+    this.iconSize = 20,
+    this.radius = 12,
+  });
+
+  final VoidCallback onTap;
+  final double size;
+  final double iconSize;
+  final double radius;
+
+  @override
+  State<_BounceAddButton> createState() => _BounceAddButtonState();
+}
+
+class _BounceAddButtonState extends State<_BounceAddButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 280),
+      vsync: this,
+      lowerBound: 0.0,
+      upperBound: 1.0,
+      value: 1.0,
+    );
+    // Bounce: shrink then overshoot back via elasticOut.
+    _scale = Tween<double>(begin: 0.8, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _handleTap() {
+    HapticFeedback.lightImpact();
+    _controller
+      ..reset()
+      ..forward();
+    widget.onTap();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: _scale,
+      child: Material(
+        color: AppTheme.green,
+        borderRadius: BorderRadius.circular(widget.radius),
+        elevation: 0,
+        shadowColor: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(widget.radius),
+          splashColor: Colors.white.withValues(alpha: 0.3),
+          onTap: _handleTap,
+          child: Container(
+            width: widget.size,
+            height: widget.size,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(widget.radius),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.green.withValues(alpha: 0.35),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Icon(
+              Icons.add_rounded,
+              color: Colors.white,
+              size: widget.iconSize,
             ),
           ),
         ),
