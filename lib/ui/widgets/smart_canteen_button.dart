@@ -8,9 +8,10 @@ class SmartCanteenButton extends StatefulWidget {
     required this.label,
     this.onPressed,
     this.fillColor = AppTheme.green,
+    this.gradient,
     this.textColor = Colors.white,
-    this.height = 52,
-    this.radius = 30,
+    this.height = 54,
+    this.radius,
     this.leading,
     this.width = double.infinity,
   });
@@ -18,9 +19,14 @@ class SmartCanteenButton extends StatefulWidget {
   final String label;
   final VoidCallback? onPressed;
   final Color fillColor;
+
+  /// Optional gradient fill. When set, it overrides [fillColor].
+  final Gradient? gradient;
   final Color textColor;
   final double height;
-  final double radius;
+
+  /// Corner radius. Defaults to a pill shape (height / 2) when null.
+  final double? radius;
   final Widget? leading;
   final double width;
 
@@ -61,6 +67,12 @@ class _SmartCanteenButtonState extends State<SmartCanteenButton>
 
   @override
   Widget build(BuildContext context) {
+    // Pill shape by default — radius scales with height.
+    final radius = widget.radius ?? widget.height / 2;
+    final shadowColor = widget.gradient != null
+        ? AppTheme.green
+        : widget.fillColor;
+
     return ScaleTransition(
       scale: _scaleAnimation,
       child: SizedBox(
@@ -68,26 +80,30 @@ class _SmartCanteenButtonState extends State<SmartCanteenButton>
         width: widget.width,
         child: Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(widget.radius),
+            gradient: widget.gradient,
+            borderRadius: BorderRadius.circular(radius),
             boxShadow: [
               BoxShadow(
-                color: widget.fillColor.withValues(alpha: 0.25),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
+                color: shadowColor.withValues(alpha: 0.3),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
               ),
             ],
           ),
           child: ElevatedButton(
             onPressed: _handlePress,
             style: ElevatedButton.styleFrom(
-              backgroundColor: widget.fillColor,
+              backgroundColor: widget.gradient != null
+                  ? Colors.transparent
+                  : widget.fillColor,
               foregroundColor: widget.textColor,
+              shadowColor: Colors.transparent,
               elevation: 0,
               padding: const EdgeInsets.symmetric(horizontal: 12),
               minimumSize: Size.zero,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(widget.radius),
+                borderRadius: BorderRadius.circular(radius),
               ),
             ),
             child: Row(

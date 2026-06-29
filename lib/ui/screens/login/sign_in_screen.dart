@@ -4,6 +4,16 @@ import '../../../theme/app_theme.dart';
 import '../../widgets/smart_canteen_widgets.dart';
 import '../home/home_screen.dart';
 
+/// Brand gradient used for the primary action buttons (#4CAF50 → #81C784).
+const _primaryGradient = LinearGradient(
+  colors: [AppTheme.green, Color(0xFF81C784)],
+  begin: Alignment.centerLeft,
+  end: Alignment.centerRight,
+);
+
+const _googleBlue = Color(0xFF4285F4);
+const _facebookBlue = Color(0xFF1877F2);
+
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key, this.initialIsLogin = true});
 
@@ -37,85 +47,74 @@ class _SignInScreenState extends State<SignInScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: constraints.maxHeight - 32,
-                ),
-                child: IntrinsicHeight(
+      body: Container(
+        // Soft gradient backdrop — light green fading into white.
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [AppTheme.greenSurface, Color(0xFFF7F8FA)],
+            begin: Alignment.topCenter,
+            end: Alignment.center,
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const SizedBox(height: 16),
+                // Header — food badge + title + tagline
+                _AuthHeader(isLogin: _isLogin),
+                const SizedBox(height: 28),
+                // Floating form card with a soft shadow for depth
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.green.withValues(alpha: 0.08),
+                        blurRadius: 24,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 28,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const SizedBox(height: 12),
-                      // Hero banner — text changes instantly with the tab
-                      _AuthHero(
-                        title: _isLogin ? 'Welcome Back' : 'Create Account',
-                        subtitle: _isLogin
-                            ? 'fresh foods are waiting\nto be in your mouth'
-                            : 'Create your account now and start\nyour meal at once',
-                      ),
-                      const SizedBox(height: 18),
                       // Tab switch
                       SmartCanteenAuthSwitch(
                         isLoginSelected: _isLogin,
                         onLoginTap: () => setState(() => _isLogin = true),
                         onSignUpTap: () => setState(() => _isLogin = false),
                       ),
-                      const SizedBox(height: 20),
-                      // Form content — smooth slide + scale + fade transition
+                      const SizedBox(height: 28),
+                      // Form content — fade + slide transition
                       AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 500),
+                        duration: const Duration(milliseconds: 450),
+                        switchInCurve: Curves.easeInOut,
+                        switchOutCurve: Curves.easeInOut,
                         transitionBuilder: (child, animation) {
                           final isLoginForm =
                               child.key == const ValueKey('login');
                           final slideOffset = Offset(
-                            isLoginForm ? -1.0 : 1.0,
+                            isLoginForm ? -0.25 : 0.25,
                             0.0,
                           );
 
                           return ClipRect(
                             child: SlideTransition(
-                              position:
-                                  Tween<Offset>(
-                                    begin: slideOffset,
-                                    end: Offset.zero,
-                                  ).animate(
-                                    CurvedAnimation(
-                                      parent: animation,
-                                      curve: Curves.easeOutQuart,
-                                    ),
-                                  ),
+                              position: Tween<Offset>(
+                                begin: slideOffset,
+                                end: Offset.zero,
+                              ).animate(animation),
                               child: FadeTransition(
-                                opacity: Tween<double>(begin: 0.0, end: 1.0)
-                                    .animate(
-                                      CurvedAnimation(
-                                        parent: animation,
-                                        curve: const Interval(
-                                          0.2,
-                                          0.7,
-                                          curve: Curves.easeOut,
-                                        ),
-                                      ),
-                                    ),
-                                child: ScaleTransition(
-                                  scale: Tween<double>(begin: 0.88, end: 1.0)
-                                      .animate(
-                                        CurvedAnimation(
-                                          parent: animation,
-                                          curve: const Interval(
-                                            0.2,
-                                            0.8,
-                                            curve: Curves.easeOut,
-                                          ),
-                                        ),
-                                      ),
-                                  alignment: Alignment.topCenter,
-                                  child: child,
-                                ),
+                                opacity: animation,
+                                child: child,
                               ),
                             ),
                           );
@@ -147,15 +146,101 @@ class _SignInScreenState extends State<SignInScreen> {
                                 onComingSoon: _showComingSoon,
                               ),
                       ),
-                      const Spacer(),
                     ],
                   ),
                 ),
-              ),
-            );
-          },
+                const SizedBox(height: 24),
+              ],
+            ),
+          ),
         ),
       ),
+    );
+  }
+}
+
+// ── Header (badge + title + tagline) ─────────────────────────────────────────
+
+class _AuthHeader extends StatelessWidget {
+  const _AuthHeader({required this.isLogin});
+
+  final bool isLogin;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        // Minimal food-themed badge
+        Container(
+          width: 84,
+          height: 84,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: _primaryGradient,
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.green.withValues(alpha: 0.3),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.restaurant_menu,
+            color: Colors.white,
+            size: 40,
+          ),
+        ),
+        const SizedBox(height: 20),
+        // Title — large, bold, animates with the active tab
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 400),
+          transitionBuilder: (child, animation) => FadeTransition(
+            opacity: animation,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, -0.15),
+                end: Offset.zero,
+              ).animate(
+                CurvedAnimation(parent: animation, curve: Curves.easeInOut),
+              ),
+              child: child,
+            ),
+          ),
+          child: Text(
+            isLogin ? 'Welcome Back' : 'Create Account',
+            key: ValueKey(isLogin),
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: AppTheme.greenDark,
+              fontSize: 30,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.3,
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        // Tagline — lighter weight
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 400),
+          transitionBuilder: (child, animation) =>
+              FadeTransition(opacity: animation, child: child),
+          child: Text(
+            isLogin
+                ? 'Fresh meals are waiting for you'
+                : 'Join us and start your meal journey',
+            key: ValueKey(isLogin),
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: AppTheme.text.withValues(alpha: 0.5),
+              fontSize: 14,
+              height: 1.4,
+              fontWeight: FontWeight.w400,
+              letterSpacing: 0.2,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -187,24 +272,24 @@ class _LoginForm extends StatelessWidget {
           keyboardType: TextInputType.emailAddress,
           prefixIcon: Icon(Icons.mail_outline, color: AppTheme.green, size: 20),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 18),
         const SmartCanteenTextField(
           label: 'Password',
           hintText: 'Enter your password',
           obscureText: true,
           prefixIcon: Icon(Icons.lock_outline, color: AppTheme.green, size: 20),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         Row(
           children: [
-            Transform.scale(
-              scale: 1.0,
-              child: Checkbox(
-                value: rememberMe,
-                activeColor: AppTheme.green,
-                side: const BorderSide(color: Color(0xFFE8E8E8), width: 1.5),
-                onChanged: onRememberMeChanged,
+            Checkbox(
+              value: rememberMe,
+              activeColor: AppTheme.green,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(6),
               ),
+              side: const BorderSide(color: Color(0xFFE8E8E8), width: 1.5),
+              onChanged: onRememberMeChanged,
             ),
             const Text(
               'Remember me',
@@ -218,38 +303,16 @@ class _LoginForm extends StatelessWidget {
             _ForgotPasswordButton(onTap: () => onComingSoon('Password reset')),
           ],
         ),
-        const SizedBox(height: 20),
-        Center(
-          child: SmartCanteenButton(
-            label: 'Log In',
-            onPressed: onLogin,
-
-            width: 180,
-            radius: 30,
-            height: 44, // smaller height
-          ),
+        const SizedBox(height: 24),
+        SmartCanteenButton(
+          label: 'Log In',
+          onPressed: onLogin,
+          gradient: _primaryGradient,
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 24),
         const SmartCanteenDividerText(label: 'OR CONTINUE WITH'),
         const SizedBox(height: 20),
-        Row(
-          children: [
-            SmartCanteenSocialButton(
-              label: 'Google',
-              icon: _socialIcon(
-                Icons.g_mobiledata,
-                color: const Color(0xFF4285F4),
-              ),
-              onTap: () => onComingSoon('Google Sign-In'),
-            ),
-            const SizedBox(width: 12),
-            SmartCanteenSocialButton(
-              label: 'Facebook',
-              icon: _socialIcon(Icons.facebook, color: const Color(0xFF1877F2)),
-              onTap: () => onComingSoon('Facebook Sign-In'),
-            ),
-          ],
-        ),
+        _SocialRow(suffix: 'Sign-In', onComingSoon: onComingSoon),
       ],
     );
   }
@@ -278,215 +341,61 @@ class _SignUpForm extends StatelessWidget {
           keyboardType: TextInputType.emailAddress,
           prefixIcon: Icon(Icons.mail_outline, color: AppTheme.green, size: 20),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 18),
         const SmartCanteenTextField(
           label: 'Password',
           hintText: 'Enter your password',
           obscureText: true,
           prefixIcon: Icon(Icons.lock_outline, color: AppTheme.green, size: 20),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 18),
         const SmartCanteenTextField(
           label: 'Confirm Password',
           hintText: 'Re-enter your password',
           obscureText: true,
           prefixIcon: Icon(Icons.lock_outline, color: AppTheme.green, size: 20),
         ),
-        const SizedBox(height: 20),
-        Center(
-          child: SmartCanteenButton(
-            label: 'Sign Up',
-            onPressed: onSignUp,
-            width: 180,
-            radius: 30,
-            height: 44, // smaller height
-          ),
+        const SizedBox(height: 24),
+        SmartCanteenButton(
+          label: 'Sign Up',
+          onPressed: onSignUp,
+          gradient: _primaryGradient,
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 24),
         const SmartCanteenDividerText(label: 'OR CONTINUE WITH'),
         const SizedBox(height: 20),
-        Row(
-          children: [
-            SmartCanteenSocialButton(
-              label: 'Google',
-              icon: _socialIcon(
-                Icons.g_mobiledata,
-                color: const Color(0xFF4285F4),
-              ),
-              onTap: () => onComingSoon('Google Sign-Up'),
-            ),
-            const SizedBox(width: 12),
-            SmartCanteenSocialButton(
-              label: 'Facebook',
-              icon: _socialIcon(Icons.facebook, color: const Color(0xFF1877F2)),
-              onTap: () => onComingSoon('Facebook Sign-Up'),
-            ),
-          ],
-        ),
+        _SocialRow(suffix: 'Sign-Up', onComingSoon: onComingSoon),
       ],
     );
   }
 }
 
-// ── Shared hero banner ──────────────────────────────────────────────────────
+// ── Shared social button row ─────────────────────────────────────────────────
 
-class _AuthHero extends StatelessWidget {
-  const _AuthHero({required this.title, required this.subtitle});
+class _SocialRow extends StatelessWidget {
+  const _SocialRow({required this.suffix, required this.onComingSoon});
 
-  final String title;
-  final String subtitle;
+  final String suffix;
+  final void Function(String) onComingSoon;
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.sizeOf(context).width.clamp(260.0, 360.0) * 0.72;
-
-    return Container(
-      height: 180,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF7CCC8A), AppTheme.green],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+    return Row(
+      children: [
+        SmartCanteenSocialButton(
+          label: 'Google',
+          brandColor: _googleBlue,
+          icon: _socialIcon(Icons.g_mobiledata, color: _googleBlue),
+          onTap: () => onComingSoon('Google $suffix'),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.green.withValues(alpha: 0.2),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            right: -18,
-            top: -18,
-            child: Opacity(opacity: 0.15, child: CanteenLogo(size: size)),
-          ),
-          Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              gradient: LinearGradient(
-                colors: [
-                  Colors.white.withValues(alpha: 0.08),
-                  Colors.white.withValues(alpha: 0.02),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 28, 20, 18),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 400),
-                  transitionBuilder: (child, animation) {
-                    return FadeTransition(
-                      opacity: Tween<double>(begin: 0.0, end: 1.0).animate(
-                        CurvedAnimation(
-                          parent: animation,
-                          curve: Curves.easeOut,
-                        ),
-                      ),
-                      child: ScaleTransition(
-                        scale: Tween<double>(begin: 0.85, end: 1.0).animate(
-                          CurvedAnimation(
-                            parent: animation,
-                            curve: Curves.easeOutCubic,
-                          ),
-                        ),
-                        child: SlideTransition(
-                          position:
-                              Tween<Offset>(
-                                begin: const Offset(0, -0.1),
-                                end: Offset.zero,
-                              ).animate(
-                                CurvedAnimation(
-                                  parent: animation,
-                                  curve: Curves.easeOutCubic,
-                                ),
-                              ),
-                          child: child,
-                        ),
-                      ),
-                    );
-                  },
-                  child: Text(
-                    title,
-                    key: ValueKey(title),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.3,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 400),
-                  transitionBuilder: (child, animation) {
-                    return FadeTransition(
-                      opacity: Tween<double>(begin: 0.0, end: 1.0).animate(
-                        CurvedAnimation(
-                          parent: animation,
-                          curve: const Interval(
-                            0.2,
-                            1.0,
-                            curve: Curves.easeOut,
-                          ),
-                        ),
-                      ),
-                      child: ScaleTransition(
-                        scale: Tween<double>(begin: 0.85, end: 1.0).animate(
-                          CurvedAnimation(
-                            parent: animation,
-                            curve: const Interval(
-                              0.1,
-                              0.9,
-                              curve: Curves.easeOutCubic,
-                            ),
-                          ),
-                        ),
-                        child: SlideTransition(
-                          position:
-                              Tween<Offset>(
-                                begin: const Offset(0, -0.08),
-                                end: Offset.zero,
-                              ).animate(
-                                CurvedAnimation(
-                                  parent: animation,
-                                  curve: Curves.easeOutCubic,
-                                ),
-                              ),
-                          child: child,
-                        ),
-                      ),
-                    );
-                  },
-                  child: Text(
-                    subtitle,
-                    key: ValueKey(subtitle),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      height: 1.4,
-                      fontWeight: FontWeight.w400,
-                      letterSpacing: 0.2,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+        const SizedBox(width: 14),
+        SmartCanteenSocialButton(
+          label: 'Facebook',
+          brandColor: _facebookBlue,
+          icon: _socialIcon(Icons.facebook, color: _facebookBlue),
+          onTap: () => onComingSoon('Facebook $suffix'),
+        ),
+      ],
     );
   }
 }
