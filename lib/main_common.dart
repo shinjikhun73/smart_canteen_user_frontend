@@ -21,11 +21,18 @@ import 'ui/screens/login/view_model/auth_view_model.dart';
 import 'ui/screens/menu_browsing/menu_screen.dart';
 import 'ui/screens/menu_browsing/view_model/menu_view_model.dart';
 import 'ui/screens/profile/profile_screen.dart';
+import 'ui/screens/settings/about_screen.dart';
+import 'ui/screens/settings/edit_profile_screen.dart';
+import 'ui/screens/settings/notification_settings_screen.dart';
+import 'ui/screens/settings/payment_methods_screen.dart';
 import 'ui/screens/splash/splash_screen.dart';
 import 'ui/states/active_coupon_state.dart';
 import 'ui/states/app_settings_state.dart';
 import 'ui/states/balance_state.dart';
+import 'ui/states/notification_prefs_state.dart';
 import 'ui/states/order_history_state.dart';
+import 'ui/states/payment_methods_state.dart';
+import 'ui/states/user_profile_state.dart';
 
 class SmartCanteenApp extends StatefulWidget {
   const SmartCanteenApp({
@@ -67,6 +74,9 @@ class _SmartCanteenAppState extends State<SmartCanteenApp> {
         // Global states
         ChangeNotifierProvider.value(value: _cart),
         ChangeNotifierProvider(create: (_) => AppSettingsState()),
+        ChangeNotifierProvider(create: (_) => UserProfileState()),
+        ChangeNotifierProvider(create: (_) => PaymentMethodsState()),
+        ChangeNotifierProvider(create: (_) => NotificationPrefsState()),
         ChangeNotifierProvider(create: (_) => OrderHistoryState()),
         ChangeNotifierProvider(
             create: (_) => BalanceState(widget.walletRepository)),
@@ -108,6 +118,12 @@ class _SmartCanteenAppState extends State<SmartCanteenApp> {
               HistoryScreen.routeName: (_) => const HistoryScreen(),
               ProfileScreen.routeName: (_) => const ProfileScreen(),
               NotificationScreen.routeName: (_) => const NotificationScreen(),
+              EditProfileScreen.routeName: (_) => const EditProfileScreen(),
+              PaymentMethodsScreen.routeName: (_) =>
+                  const PaymentMethodsScreen(),
+              NotificationSettingsScreen.routeName: (_) =>
+                  const NotificationSettingsScreen(),
+              AboutScreen.routeName: (_) => const AboutScreen(),
             },
           ),
         ),

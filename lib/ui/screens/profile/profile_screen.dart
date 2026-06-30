@@ -1,6 +1,8 @@
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
@@ -8,7 +10,18 @@ import '../../../theme/app_theme.dart';
 import '../../../ui/states/app_settings_state.dart';
 import '../../../ui/states/balance_state.dart';
 import '../../../ui/states/order_history_state.dart';
+import '../../../ui/states/user_profile_state.dart';
+import '../../../ui/utils/animation_utils.dart';
 import '../../../ui/utils/async_value.dart';
+import '../../widgets/app_dialog.dart';
+import '../../widgets/settings_widgets.dart';
+import '../settings/about_screen.dart';
+import '../settings/edit_profile_screen.dart';
+import '../settings/notification_settings_screen.dart';
+import '../settings/payment_methods_screen.dart';
+import '../shell/app_shell.dart';
+
+const Color _kRed = Color(0xFFE53935);
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -20,7 +33,6 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  File? _profileImage;
   final _picker = ImagePicker();
 
   Future<void> _pickImage(ImageSource source) async {
@@ -31,11 +43,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
       maxHeight: 512,
     );
     if (picked != null && mounted) {
-      setState(() => _profileImage = File(picked.path));
+      context.read<UserProfileState>().setPhoto(File(picked.path));
+    }
+  }
+
+  void _open(Widget screen) {
+    HapticFeedback.selectionClick();
+    Navigator.of(context).push(AnimationUtils.fadeSlideUp<void>(screen));
+  }
+
+  Future<void> _confirmLogout() async {
+    final confirmed = await AppDialog.show(
+      context,
+      title: 'Log Out',
+      body: Text(
+        'Are you sure you want to log out of your account?',
+        style: TextStyle(color: context.mutedColor, fontSize: 14, height: 1.4),
+      ),
+      confirmLabel: 'Log Out',
+      isDestructive: true,
+    );
+    if (confirmed == true && mounted) {
+      HapticFeedback.mediumImpact();
+      Navigator.pushNamedAndRemoveUntil(context, '/', (_) => false);
     }
   }
 
   void _showImageSourceSheet() {
+    final user = context.read<UserProfileState>();
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: context.cardColor,
@@ -83,7 +118,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _pickImage(ImageSource.gallery);
                 },
               ),
-              if (_profileImage != null) ...[
+              if (user.photo != null) ...[
                 const SizedBox(height: 10),
                 _PickerOption(
                   icon: Icons.delete_outline_rounded,
@@ -91,7 +126,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   isDestructive: true,
                   onTap: () {
                     Navigator.pop(ctx);
-                    setState(() => _profileImage = null);
+                    user.setPhoto(null);
                   },
                 ),
               ],
@@ -108,13 +143,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final balanceUsd = context.watch<BalanceState>().balanceUsd;
     final allOrders = context.watch<OrderHistoryState>().orders;
     final orders = allOrders.where((o) => o.type == 'order').toList();
-    final String balStr;
+    final settings = context.watch<AppSettingsState>();
+    final user = context.watch<UserProfileState>();
+
+    double? balanceValue;
     if (balanceUsd case AsyncData<double>(:final data)) {
-      balStr = '\$${data.toStringAsFixed(2)}';
-    } else if (balanceUsd is AsyncError) {
-      balStr = '--';
-    } else {
-      balStr = '···';
+      balanceValue = data;
     }
 
     return Scaffold(
@@ -122,258 +156,217 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: ListView(
         padding: EdgeInsets.zero,
         children: [
-          // ── Gradient header ─────────────────────────────────────────────
-          Container(
-            padding: EdgeInsets.fromLTRB(
-              20,
-              MediaQuery.of(context).padding.top + 16,
-              20,
-              32,
+          SettingsFadeIn(
+            index: 0,
+            child: _Header(
+              user: user,
+              onEditPhoto: _showImageSourceSheet,
+              onEditProfile: () => _open(const EditProfileScreen()),
             ),
-            decoration: BoxDecoration(gradient: AppTheme.headerGradient),
-            child: Column(
+          ),
+
+          // ── Stats row ───────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+            child: SettingsFadeIn(
+              index: 1,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _StatCard(
+                      icon: Icons.receipt_long_rounded,
+                      end: orders.length.toDouble(),
+                      label: 'Orders',
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _StatCard(
+                      icon: Icons.account_balance_wallet_rounded,
+                      end: balanceValue,
+                      prefix: '\$',
+                      decimals: 2,
+                      label: 'Balance',
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _StatCard(
+                      icon: Icons.stars_rounded,
+                      end: 320,
+                      label: 'Points',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // ── Profile section ─────────────────────────────────────────────
+          SettingsFadeIn(
+            index: 2,
+            child: SettingsSection(
+              title: 'Profile',
               children: [
-                Row(
-                  children: [
-                    const Text(
-                      'My Profile',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const Spacer(),
-                    GestureDetector(
-                      onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Settings — coming soon'),
-                          behavior: SnackBarBehavior.floating,
-                          backgroundColor: AppTheme.green,
-                        ),
-                      ),
-                      child: Container(
-                        width: 38,
-                        height: 38,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(11),
-                        ),
-                        child: const Icon(
-                          Icons.settings_outlined,
-                          color: Colors.white,
-                          size: 18,
-                        ),
-                      ),
-                    ),
-                  ],
+                SettingsTile(
+                  icon: Icons.edit_outlined,
+                  title: 'Edit Profile',
+                  subtitle: 'Update your name, email & photo',
+                  onTap: () => _open(const EditProfileScreen()),
                 ),
-                const SizedBox(height: 24),
-                GestureDetector(
-                  onTap: _showImageSourceSheet,
-                  child: Stack(
-                    children: [
-                      Container(
-                        width: 86,
-                        height: 86,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white,
-                          border: Border.all(color: Colors.white, width: 3),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.2),
-                              blurRadius: 18,
-                              offset: const Offset(0, 5),
-                            ),
-                          ],
-                        ),
-                        child: ClipOval(
-                          child: _profileImage != null
-                              ? Image.file(
-                                  _profileImage!,
-                                  fit: BoxFit.cover,
-                                  width: 86,
-                                  height: 86,
-                                )
-                              : const Center(
-                                  child: Text(
-                                    'JD',
-                                    style: TextStyle(
-                                      fontSize: 28,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppTheme.green,
-                                    ),
-                                  ),
-                                ),
-                        ),
-                      ),
-                      Positioned(
-                        right: 0,
-                        bottom: 0,
-                        child: Container(
-                          width: 28,
-                          height: 28,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.12),
-                                blurRadius: 6,
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.camera_alt_rounded,
-                            size: 14,
-                            color: AppTheme.green,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                SettingsTile(
+                  icon: Icons.credit_card_outlined,
+                  title: 'Payment Methods',
+                  subtitle: 'Manage your saved cards',
+                  onTap: () => _open(const PaymentMethodsScreen()),
                 ),
-                const SizedBox(height: 14),
-                const Text(
-                  'John Doe',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                  ),
+                SettingsTile(
+                  icon: Icons.history_rounded,
+                  title: 'Order History',
+                  subtitle: 'View past orders',
+                  onTap: () => AppShellScope.maybeOf(context)?.setTab(3),
                 ),
-                const SizedBox(height: 5),
-                const Text(
-                  'john.doe@cadt.edu.kh',
-                  style: TextStyle(color: Colors.white70, fontSize: 13),
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.18),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: const Text(
-                    'CADT Scholar',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                SettingsTile(
+                  icon: Icons.notifications_outlined,
+                  title: 'Notifications',
+                  subtitle: 'Set your preferences',
+                  isLast: true,
+                  onTap: () => _open(const NotificationSettingsScreen()),
                 ),
               ],
             ),
           ),
 
-          // ── Stats card ──────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              decoration: BoxDecoration(
-                color: context.cardColor,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
-                    blurRadius: 20,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: IntrinsicHeight(
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _StatItem(
-                        value: '${orders.length}',
-                        label: 'Orders',
-                      ),
-                    ),
-                    VerticalDivider(
-                      width: 1,
-                      color: context.borderColor,
-                      indent: 8,
-                      endIndent: 8,
-                    ),
-                    Expanded(
-                      child: _StatItem(value: balStr, label: 'Balance'),
-                    ),
-                    VerticalDivider(
-                      width: 1,
-                      color: context.borderColor,
-                      indent: 8,
-                      endIndent: 8,
-                    ),
-                    Expanded(
-                      child: _StatItem(value: '320', label: 'Points'),
-                    ),
-                  ],
+          // ── Preferences section ─────────────────────────────────────────
+          SettingsFadeIn(
+            index: 3,
+            child: SettingsSection(
+              title: 'Preferences',
+              children: [
+                _DarkModeTile(
+                  isDark: settings.isDarkMode,
+                  onToggle: settings.toggleDarkMode,
                 ),
-              ),
+              ],
             ),
           ),
 
-          // ── Menu items card ─────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-            child: Container(
-              decoration: BoxDecoration(
-                color: context.cardColor,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 16,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(children: _buildMenuItems(context)),
+          // ── App Info section ────────────────────────────────────────────
+          SettingsFadeIn(
+            index: 4,
+            child: SettingsSection(
+              title: 'App Info',
+              children: [
+                SettingsTile(
+                  icon: Icons.info_outline_rounded,
+                  title: 'About',
+                  subtitle: 'App info, version & credits',
+                  isLast: true,
+                  onTap: () => _open(const AboutScreen()),
+                ),
+              ],
             ),
           ),
 
           // ── Logout button ───────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-            child: GestureDetector(
-              onTap: () =>
-                  Navigator.pushNamedAndRemoveUntil(context, '/', (_) => false),
-              child: Container(
-                height: 52,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFEBEE),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFFFCDD2)),
+          SettingsFadeIn(
+            index: 5,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
+              child: _LogoutButton(onTap: _confirmLogout),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Animated gradient header with avatar ───────────────────────────────────
+
+class _Header extends StatelessWidget {
+  const _Header({
+    required this.user,
+    required this.onEditPhoto,
+    required this.onEditProfile,
+  });
+
+  final UserProfileState user;
+  final VoidCallback onEditPhoto;
+  final VoidCallback onEditProfile;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+        20,
+        MediaQuery.of(context).padding.top + 16,
+        20,
+        32,
+      ),
+      decoration: const BoxDecoration(
+        // Soft mint → emerald gradient.
+        gradient: LinearGradient(
+          colors: [Color(0xFF66BB6A), Color(0xFF2E7D32), Color(0xFF1B5E20)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              const Text(
+                'My Profile',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.3,
                 ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.logout_rounded,
-                      color: Color(0xFFE53935),
-                      size: 20,
-                    ),
-                    SizedBox(width: 8),
-                    Text(
-                      'Log Out',
-                      style: TextStyle(
-                        color: Color(0xFFE53935),
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
+              ),
+              const Spacer(),
+              _IconButtonGlass(
+                icon: Icons.edit_outlined,
+                onTap: onEditProfile,
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          _Avatar(
+            photo: user.photo,
+            initials: user.initials,
+            onTap: onEditPhoto,
+          ),
+          const SizedBox(height: 14),
+          Text(
+            user.name,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.2,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            user.email,
+            style: const TextStyle(color: Colors.white70, fontSize: 13),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+            ),
+            child: Text(
+              user.badge,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
@@ -381,131 +374,136 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
+}
 
-  List<Widget> _buildMenuItems(BuildContext context) {
-    final settings = context.watch<AppSettingsState>();
+class _IconButtonGlass extends StatelessWidget {
+  const _IconButtonGlass({required this.icon, required this.onTap});
 
-    final staticItems = [
-      (Icons.edit_outlined, 'Edit Profile', 'Update your info'),
-      (Icons.credit_card_outlined, 'Payment Methods', 'Manage your cards'),
-      (Icons.history, 'Order History', 'View past orders'),
-      (Icons.notifications_outlined, 'Notifications', 'Set your preferences'),
-    ];
+  final IconData icon;
+  final VoidCallback onTap;
 
-    final rows = <Widget>[];
-
-    for (var i = 0; i < staticItems.length; i++) {
-      final item = staticItems[i];
-      rows.add(
-        _menuRow(
-          context: context,
-          icon: item.$1,
-          title: item.$2,
-          subtitle: item.$3,
-          isFirst: i == 0,
-          isLast: false,
-          onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('${item.$2} — coming soon'),
-              behavior: SnackBarBehavior.floating,
-              backgroundColor: AppTheme.green,
-            ),
-          ),
-        ),
-      );
-      rows.add(
-        Divider(
-          indent: 70,
-          endIndent: 16,
-          height: 1,
-          color: context.borderColor,
-        ),
-      );
-    }
-
-    // Dark mode toggle row
-    rows.add(_darkModeRow(context, settings));
-    rows.add(
-      Divider(indent: 70, endIndent: 16, height: 1, color: context.borderColor),
-    );
-
-    // About row
-    rows.add(
-      _menuRow(
-        context: context,
-        icon: Icons.info_outline,
-        title: 'About',
-        subtitle: 'App info & version',
-        isFirst: false,
-        isLast: true,
-        onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('About — coming soon'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppTheme.green,
-          ),
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white.withValues(alpha: 0.15),
+      borderRadius: BorderRadius.circular(11),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        splashColor: Colors.white.withValues(alpha: 0.2),
+        child: SizedBox(
+          width: 38,
+          height: 38,
+          child: Icon(icon, color: Colors.white, size: 18),
         ),
       ),
     );
-
-    return rows;
   }
+}
 
-  Widget _menuRow({
-    required BuildContext context,
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required bool isFirst,
-    required bool isLast,
-    required VoidCallback onTap,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.vertical(
-          top: isFirst ? const Radius.circular(20) : Radius.zero,
-          bottom: isLast ? const Radius.circular(20) : Radius.zero,
-        ),
+/// Avatar with a blurred halo behind it and a gentle scale-in on load.
+class _Avatar extends StatelessWidget {
+  const _Avatar({
+    required this.photo,
+    required this.initials,
+    required this.onTap,
+  });
+
+  final File? photo;
+  final String initials;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.7, end: 1.0),
+      duration: const Duration(milliseconds: 650),
+      curve: Curves.easeOutBack,
+      builder: (context, scale, child) => Transform.scale(
+        scale: scale.clamp(0.0, 1.0),
+        child: Opacity(opacity: scale.clamp(0.0, 1.0), child: child),
+      ),
+      child: GestureDetector(
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          child: Row(
+        child: SizedBox(
+          width: 116,
+          height: 116,
+          child: Stack(
+            alignment: Alignment.center,
+            clipBehavior: Clip.none,
             children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: context.surfaceColor,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: AppTheme.green, size: 20),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: context.textColor,
-                        fontSize: 14,
-                      ),
+              // Blurred translucent halo for depth.
+              ClipOval(
+                child: BackdropFilter(
+                  filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                  child: Container(
+                    width: 112,
+                    height: 112,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withValues(alpha: 0.18),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: TextStyle(color: context.mutedColor, fontSize: 11),
+                  ),
+                ),
+              ),
+              Container(
+                width: 86,
+                height: 86,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white,
+                  border: Border.all(color: Colors.white, width: 3),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      blurRadius: 18,
+                      offset: const Offset(0, 5),
                     ),
                   ],
                 ),
+                child: ClipOval(
+                  child: photo != null
+                      ? Image.file(
+                          photo!,
+                          fit: BoxFit.cover,
+                          width: 86,
+                          height: 86,
+                        )
+                      : Center(
+                          child: Text(
+                            initials,
+                            style: const TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.green,
+                            ),
+                          ),
+                        ),
+                ),
               ),
-              Icon(
-                Icons.arrow_forward_ios_rounded,
-                size: 13,
-                color: context.mutedColor,
+              // Edit icon overlay.
+              Positioned(
+                right: 12,
+                bottom: 12,
+                child: Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.15),
+                        blurRadius: 6,
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.camera_alt_rounded,
+                    size: 14,
+                    color: AppTheme.green,
+                  ),
+                ),
               ),
             ],
           ),
@@ -513,25 +511,125 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
+}
 
-  Widget _darkModeRow(BuildContext context, AppSettingsState settings) {
+// ── Stat card with count-up number ─────────────────────────────────────────
+
+class _StatCard extends StatelessWidget {
+  const _StatCard({
+    required this.icon,
+    required this.end,
+    required this.label,
+    this.prefix = '',
+    this.decimals = 0,
+  });
+
+  final IconData icon;
+
+  /// Target value; null shows a loading placeholder.
+  final double? end;
+  final String label;
+  final String prefix;
+  final int decimals;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+      decoration: BoxDecoration(
+        color: context.cardColor,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppTheme.green.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: Icon(icon, color: AppTheme.green, size: 19),
+          ),
+          const SizedBox(height: 10),
+          if (end == null)
+            Text(
+              '···',
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
+                color: context.mutedColor,
+              ),
+            )
+          else
+            TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: end),
+              duration: const Duration(milliseconds: 900),
+              curve: Curves.easeInOut,
+              builder: (context, value, _) => Text(
+                '$prefix${value.toStringAsFixed(decimals)}',
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.green,
+                  letterSpacing: -0.3,
+                ),
+              ),
+            ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+              color: context.mutedColor,
+              letterSpacing: 0.1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Dark mode tile with animated icon + pill toggle ────────────────────────
+
+class _DarkModeTile extends StatelessWidget {
+  const _DarkModeTile({required this.isDark, required this.onToggle});
+
+  final bool isDark;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
           Container(
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: context.surfaceColor,
+              color: AppTheme.green.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
-              settings.isDarkMode
-                  ? Icons.dark_mode_rounded
-                  : Icons.light_mode_rounded,
-              color: AppTheme.green,
-              size: 20,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              transitionBuilder: (child, anim) =>
+                  ScaleTransition(scale: anim, child: child),
+              child: Icon(
+                isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                key: ValueKey(isDark),
+                color: AppTheme.green,
+                size: 20,
+              ),
             ),
           ),
           const SizedBox(width: 14),
@@ -549,50 +647,83 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  settings.isDarkMode ? 'Currently on' : 'Currently off',
+                  isDark ? 'Currently on' : 'Currently off',
                   style: TextStyle(color: context.mutedColor, fontSize: 11),
                 ),
               ],
             ),
           ),
-          Switch(
-            value: settings.isDarkMode,
-            onChanged: (_) => settings.toggleDarkMode(),
-            activeThumbColor: AppTheme.green,
-            activeTrackColor: AppTheme.greenSurface,
-          ),
+          AppPillToggle(value: isDark, onChanged: (_) => onToggle()),
         ],
       ),
     );
   }
 }
 
-// ── Supporting widgets ────────────────────────────────────────────────────────
+// ── Logout button ──────────────────────────────────────────────────────────
 
-class _StatItem extends StatelessWidget {
-  const _StatItem({required this.value, required this.label});
+class _LogoutButton extends StatefulWidget {
+  const _LogoutButton({required this.onTap});
+  final VoidCallback onTap;
 
-  final String value;
-  final String label;
+  @override
+  State<_LogoutButton> createState() => _LogoutButtonState();
+}
+
+class _LogoutButtonState extends State<_LogoutButton> {
+  bool _pressed = false;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: AppTheme.green,
+    return AnimatedScale(
+      scale: _pressed ? 0.98 : 1.0,
+      duration: const Duration(milliseconds: 120),
+      curve: Curves.easeInOut,
+      child: GestureDetector(
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapUp: (_) => setState(() => _pressed = false),
+        onTapCancel: () => setState(() => _pressed = false),
+        onTap: widget.onTap,
+        child: Container(
+          height: 52,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFEF5350), Color(0xFFD32F2F)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(26),
+            boxShadow: [
+              BoxShadow(
+                color: _kRed.withValues(alpha: 0.32),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.logout_rounded, color: Colors.white, size: 20),
+              SizedBox(width: 8),
+              Text(
+                'Log Out',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 5),
-        Text(label, style: TextStyle(fontSize: 12, color: context.mutedColor)),
-      ],
+      ),
     );
   }
 }
+
+// ── Image source picker option ─────────────────────────────────────────────
 
 class _PickerOption extends StatelessWidget {
   const _PickerOption({
@@ -609,10 +740,9 @@ class _PickerOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isDestructive ? const Color(0xFFE53935) : AppTheme.green;
-    final bgColor = isDestructive
-        ? const Color(0xFFFFEBEE)
-        : context.surfaceColor;
+    final color = isDestructive ? _kRed : AppTheme.green;
+    final bgColor =
+        isDestructive ? const Color(0xFFFFEBEE) : context.surfaceColor;
 
     return Material(
       color: Colors.transparent,

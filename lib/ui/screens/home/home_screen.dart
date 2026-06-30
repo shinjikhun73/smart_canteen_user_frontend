@@ -9,6 +9,7 @@ import '../../../models/food_item.dart';
 import '../../../theme/app_theme.dart';
 import '../../../ui/states/balance_state.dart';
 import '../../../ui/states/order_history_state.dart';
+import '../../../ui/states/user_profile_state.dart';
 import '../../../ui/utils/async_value.dart';
 import '../../../ui/utils/currency_formatter.dart';
 import '../../widgets/cart_bar.dart';
@@ -309,6 +310,7 @@ class _HeaderState extends State<_Header> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final user = context.watch<UserProfileState>();
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -343,13 +345,22 @@ class _HeaderState extends State<_Header> with SingleTickerProviderStateMixin {
                   ],
                 ),
                 alignment: Alignment.center,
-                child: const Text(
-                  'JD',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 16,
-                  ),
+                child: ClipOval(
+                  child: user.photo != null
+                      ? Image.file(
+                          user.photo!,
+                          width: 50,
+                          height: 50,
+                          fit: BoxFit.cover,
+                        )
+                      : Text(
+                          user.initials,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
+                          ),
+                        ),
                 ),
               ),
             ),
@@ -373,7 +384,7 @@ class _HeaderState extends State<_Header> with SingleTickerProviderStateMixin {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'John Doe',
+                        user.name,
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
