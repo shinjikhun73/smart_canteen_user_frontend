@@ -1,55 +1,403 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../../models/food_item.dart';
 import '../../../theme/app_theme.dart';
 import '../../../ui/states/order_history_state.dart';
-import '../../widgets/smart_canteen_widgets.dart';
 
-class HistoryScreen extends StatelessWidget {
+// ── Shared color cues ──────────────────────────────────────────────────────
+const Color _kRed = Color(0xFFE53935); // expenses
+const Color _kGray = Color(0xFF9E9E9E); // pending / neutral
+
+/// How the transaction list is ordered.
+enum _SortBy { newest, amountHigh, amountLow }
+
+extension on _SortBy {
+  String get label => switch (this) {
+        _SortBy.newest => 'Most recent',
+        _SortBy.amountHigh => 'Amount: high to low',
+        _SortBy.amountLow => 'Amount: low to high',
+      };
+
+  IconData get icon => switch (this) {
+        _SortBy.newest => Icons.schedule_rounded,
+        _SortBy.amountHigh => Icons.arrow_downward_rounded,
+        _SortBy.amountLow => Icons.arrow_upward_rounded,
+      };
+}
+
+class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
 
   static const routeName = '/history';
 
   @override
+  State<HistoryScreen> createState() => _HistoryScreenState();
+}
+
+class _HistoryScreenState extends State<HistoryScreen> {
+  _SortBy _sort = _SortBy.newest;
+
+  List<OrderRecord> _sorted(List<OrderRecord> orders) {
+    final list = [...orders];
+    switch (_sort) {
+      case _SortBy.newest:
+        break; // already newest-first by insertion order
+      case _SortBy.amountHigh:
+        list.sort((a, b) => b.total.compareTo(a.total));
+      case _SortBy.amountLow:
+        list.sort((a, b) => a.total.compareTo(b.total));
+    }
+    return list;
+  }
+
+  void _showSortMenu() {
+    HapticFeedback.selectionClick();
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _SortSheet(
+        current: _sort,
+        onSelected: (s) => setState(() => _sort = s),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final orders = context.watch<OrderHistoryState>().orders;
+    final sorted = _sorted(orders);
+
+    final spent = orders
+        .where((o) => o.type == 'order' && o.status != 'Failed')
+        .fold<double>(0, (sum, o) => sum + o.total);
+    final topUps = orders
+        .where((o) => o.type == 'deposit' && o.status != 'Failed')
+        .fold<double>(0, (sum, o) => sum + o.total);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Order History',
-          style: TextStyle(fontWeight: FontWeight.w700),
-        ),
-      ),
-      body: orders.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.receipt_long_outlined,
-                      size: 56, color: context.borderColor),
-                  const SizedBox(height: 12),
-                  Text(
-                    'No orders yet',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: context.mutedColor,
-                    ),
+      body: Column(
+        children: [
+          _HistoryHeader(
+            isSortActive: _sort != _SortBy.newest,
+            onSortTap: _showSortMenu,
+          ),
+          Expanded(
+            child: orders.isEmpty
+                ? const _EmptyState()
+                : ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                    // +1 for the summary card pinned at the top of the list.
+                    itemCount: sorted.length + 1,
+                    itemBuilder: (context, index) {
+                      if (index == 0) {
+                        return _FadeInItem(
+                          index: 0,
+                          child: Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: _SummaryCard(spent: spent, topUps: topUps),
+                          ),
+                        );
+                      }
+                      final order = sorted[index - 1];
+                      return _FadeInItem(
+                        key: ValueKey('${_sort}_${order.id}'),
+                        index: index,
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _OrderCard(order: order),
+                        ),
+                      );
+                    },
                   ),
-                ],
-              ),
-            )
-          : ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: orders.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 12),
-              itemBuilder: (_, i) => _OrderCard(order: orders[i]),
-            ),
+          ),
+        ],
+      ),
     );
   }
 }
+
+// ── Animated gradient header ───────────────────────────────────────────────
+
+class _HistoryHeader extends StatefulWidget {
+  const _HistoryHeader({required this.isSortActive, required this.onSortTap});
+
+  final bool isSortActive;
+  final VoidCallback onSortTap;
+
+  @override
+  State<_HistoryHeader> createState() => _HistoryHeaderState();
+}
+
+class _HistoryHeaderState extends State<_HistoryHeader> {
+  bool _sortPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppTheme.green.withValues(alpha: isDark ? 0.18 : 0.12),
+            context.bgColor.withValues(alpha: 0),
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 16, 14),
+          // Title fades in and slides up once on mount.
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: 1),
+            duration: const Duration(milliseconds: 550),
+            curve: Curves.easeInOut,
+            builder: (context, t, child) => Opacity(
+              opacity: t,
+              child: Transform.translate(
+                offset: Offset(0, (1 - t) * 14),
+                child: child,
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Order History',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w800,
+                          color: context.textColor,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Your transactions & top-ups',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w500,
+                          color: context.mutedColor,
+                          letterSpacing: 0.1,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                GestureDetector(
+                  onTapDown: (_) => setState(() => _sortPressed = true),
+                  onTapUp: (_) {
+                    setState(() => _sortPressed = false);
+                    widget.onSortTap();
+                  },
+                  onTapCancel: () => setState(() => _sortPressed = false),
+                  child: AnimatedScale(
+                    scale: _sortPressed ? 0.92 : 1.0,
+                    duration: const Duration(milliseconds: 100),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 250),
+                      width: 46,
+                      height: 46,
+                      decoration: BoxDecoration(
+                        gradient: widget.isSortActive
+                            ? const LinearGradient(
+                                colors: [Color(0xFF1B5E20), Color(0xFF43A047)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              )
+                            : null,
+                        color: widget.isSortActive ? null : context.cardColor,
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: widget.isSortActive
+                                ? AppTheme.green.withValues(alpha: 0.35)
+                                : Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 12,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.tune_rounded,
+                        size: 21,
+                        color: widget.isSortActive
+                            ? Colors.white
+                            : context.textColor,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Spent vs top-ups summary chart ─────────────────────────────────────────
+
+class _SummaryCard extends StatelessWidget {
+  const _SummaryCard({required this.spent, required this.topUps});
+
+  final double spent;
+  final double topUps;
+
+  @override
+  Widget build(BuildContext context) {
+    final total = spent + topUps;
+    final spentFraction = total <= 0 ? 0.0 : spent / total;
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: context.cardColor,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _SummaryStat(
+                  label: 'Total Spent',
+                  amount: spent,
+                  color: _kRed,
+                  icon: Icons.south_west_rounded,
+                ),
+              ),
+              Container(
+                width: 1,
+                height: 40,
+                margin: const EdgeInsets.symmetric(horizontal: 14),
+                color: context.borderColor,
+              ),
+              Expanded(
+                child: _SummaryStat(
+                  label: 'Top-ups',
+                  amount: topUps,
+                  color: AppTheme.green,
+                  icon: Icons.north_east_rounded,
+                  alignEnd: true,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Proportional bar: red (spent) vs green (top-ups), animates in.
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: SizedBox(
+              height: 10,
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: spentFraction),
+                duration: const Duration(milliseconds: 700),
+                curve: Curves.easeInOut,
+                builder: (context, fraction, _) {
+                  return Row(
+                    children: [
+                      if (fraction > 0)
+                        Expanded(
+                          flex: (fraction * 1000).round(),
+                          child: Container(color: _kRed.withValues(alpha: 0.85)),
+                        ),
+                      if (fraction < 1)
+                        Expanded(
+                          flex: ((1 - fraction) * 1000).round(),
+                          child: Container(
+                            color: AppTheme.green.withValues(alpha: 0.85),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SummaryStat extends StatelessWidget {
+  const _SummaryStat({
+    required this.label,
+    required this.amount,
+    required this.color,
+    required this.icon,
+    this.alignEnd = false,
+  });
+
+  final String label;
+  final double amount;
+  final Color color;
+  final IconData icon;
+  final bool alignEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment:
+          alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, size: 14, color: color),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: context.mutedColor,
+                letterSpacing: 0.1,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          '\$${amount.toStringAsFixed(2)}',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+            color: color,
+            letterSpacing: -0.5,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Transaction card ───────────────────────────────────────────────────────
 
 class _OrderCard extends StatefulWidget {
   const _OrderCard({required this.order});
@@ -59,33 +407,17 @@ class _OrderCard extends StatefulWidget {
   State<_OrderCard> createState() => _OrderCardState();
 }
 
-class _OrderCardState extends State<_OrderCard>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _expandController;
-  bool _isExpanded = false;
+class _OrderCardState extends State<_OrderCard> {
+  bool _pressed = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _expandController = AnimationController(
-      duration: const Duration(milliseconds: 400),
-      vsync: this,
+  void _openDetails() {
+    HapticFeedback.selectionClick();
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _DetailsSheet(order: widget.order),
     );
-  }
-
-  @override
-  void dispose() {
-    _expandController.dispose();
-    super.dispose();
-  }
-
-  void _toggleExpand() {
-    setState(() => _isExpanded = !_isExpanded);
-    if (_isExpanded) {
-      _expandController.forward();
-    } else {
-      _expandController.reverse();
-    }
   }
 
   @override
@@ -94,128 +426,286 @@ class _OrderCardState extends State<_OrderCard>
     final isDeposit = order.type == 'deposit';
     final isPending = order.status == 'Pending';
     final isFailed = order.status == 'Failed';
+    final isCompleted = order.status == 'Completed';
 
-    const kPending = Color(0xFFFF9800);
-    const kRed = Color(0xFFE53935);
-
-    final statusBg = isPending
-        ? kPending.withValues(alpha: 0.12)
+    // Color cues: green = income/top-up, red = expense, gray = pending.
+    final statusColor = isCompleted
+        ? (isDeposit ? AppTheme.green : _kRed)
         : isFailed
-            ? kRed.withValues(alpha: 0.1)
-            : AppTheme.green.withValues(alpha: 0.1);
-    final statusFg = isPending
-        ? kPending
-        : isFailed
-            ? kRed
-            : AppTheme.green;
+            ? _kRed
+            : _kGray;
 
     final amountColor = isFailed
-        ? context.mutedColor
-        : isDeposit
-            ? AppTheme.green
-            : isPending
-                ? kPending
-                : kRed;
+        ? _kGray
+        : isPending
+            ? _kGray
+            : isDeposit
+                ? AppTheme.green
+                : _kRed;
     final amountLabel = isDeposit
         ? '+\$${order.total.toStringAsFixed(2)}'
         : '-\$${order.total.toStringAsFixed(2)}';
 
-    return GestureDetector(
-      onTap: _toggleExpand,
-      child: AnimatedBuilder(
-        animation: _expandController,
-        builder: (context, child) {
-          return FancyCard(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: SizedBox(
-                        width: 52,
-                        height: 52,
-                        child: isDeposit
-                            ? const _DepositThumbnail()
-                            : _FoodThumbnail(order: order),
-                      ),
+    return AnimatedScale(
+      scale: _pressed ? 0.97 : 1.0,
+      duration: const Duration(milliseconds: 120),
+      curve: Curves.easeInOut,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Material(
+          color: context.cardColor,
+          borderRadius: BorderRadius.circular(18),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(18),
+            splashColor: AppTheme.green.withValues(alpha: 0.12),
+            highlightColor: AppTheme.green.withValues(alpha: 0.05),
+            onTap: _openDetails,
+            onTapDown: (_) => setState(() => _pressed = true),
+            onTapUp: (_) => setState(() => _pressed = false),
+            onTapCancel: () => setState(() => _pressed = false),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: SizedBox(
+                      width: 52,
+                      height: 52,
+                      child: isDeposit
+                          ? const _DepositThumbnail()
+                          : _FoodThumbnail(order: order),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            order.items,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
-                            ),
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            order.date,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: AppTheme.mutedText,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          amountLabel,
+                          order.items,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 14,
                             fontWeight: FontWeight.w700,
-                            color: amountColor,
+                            fontSize: 14,
+                            color: context.textColor,
+                            letterSpacing: -0.1,
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: statusBg,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            order.status,
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: statusFg,
-                              fontWeight: FontWeight.w700,
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.access_time_rounded,
+                              size: 12,
+                              color: context.mutedColor,
                             ),
-                          ),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                order.date,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w500,
+                                  color: context.mutedColor,
+                                  letterSpacing: 0.1,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
-                ),
-                if (_isExpanded) ...[
-                  const SizedBox(height: 12),
-                  Divider(height: 1, color: context.borderColor),
-                  const SizedBox(height: 12),
-                  isDeposit
-                      ? _DepositDetails(order: order)
-                      : _FoodOrderDetails(order: order),
+                  ),
+                  const SizedBox(width: 8),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        amountLabel,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: amountColor,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      _StatusBadge(
+                        label: order.status,
+                        color: statusColor,
+                        pulse: isCompleted,
+                      ),
+                    ],
+                  ),
                 ],
-              ],
+              ),
             ),
-          );
-        },
+          ),
+        ),
       ),
     );
   }
 }
+
+/// Status pill. When [pulse] is true (Completed) it gently breathes.
+class _StatusBadge extends StatefulWidget {
+  const _StatusBadge({
+    required this.label,
+    required this.color,
+    required this.pulse,
+  });
+
+  final String label;
+  final Color color;
+  final bool pulse;
+
+  @override
+  State<_StatusBadge> createState() => _StatusBadgeState();
+}
+
+class _StatusBadgeState extends State<_StatusBadge>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+    if (widget.pulse) _controller.repeat(reverse: true);
+  }
+
+  @override
+  void didUpdateWidget(_StatusBadge old) {
+    super.didUpdateWidget(old);
+    if (widget.pulse && !_controller.isAnimating) {
+      _controller.repeat(reverse: true);
+    } else if (!widget.pulse && _controller.isAnimating) {
+      _controller
+        ..stop()
+        ..value = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final pill = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+      decoration: BoxDecoration(
+        color: widget.color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (widget.pulse) ...[
+            Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: widget.color,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 5),
+          ],
+          Text(
+            widget.label,
+            style: TextStyle(
+              fontSize: 10,
+              color: widget.color,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.2,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (!widget.pulse) return pill;
+
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final t = Curves.easeInOut.transform(_controller.value);
+        return Opacity(opacity: 0.65 + 0.35 * t, child: child);
+      },
+      child: pill,
+    );
+  }
+}
+
+// ── Empty state ────────────────────────────────────────────────────────────
+
+class _EmptyState extends StatelessWidget {
+  const _EmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              color: AppTheme.green.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.receipt_long_outlined,
+              size: 36,
+              color: AppTheme.green,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No orders yet',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: context.textColor,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Your orders and top-ups will appear here',
+            style: TextStyle(
+              fontSize: 13,
+              color: context.mutedColor,
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Thumbnails ─────────────────────────────────────────────────────────────
 
 class _FoodThumbnail extends StatelessWidget {
   const _FoodThumbnail({required this.order});
@@ -272,7 +762,195 @@ class _DepositThumbnail extends StatelessWidget {
   }
 }
 
-// ── Expanded view for food orders ─────────────────────────────────────────
+// ── View Details modal ─────────────────────────────────────────────────────
+
+class _DetailsSheet extends StatelessWidget {
+  const _DetailsSheet({required this.order});
+  final OrderRecord order;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDeposit = order.type == 'deposit';
+    return SafeArea(
+      top: false,
+      child: Container(
+        decoration: BoxDecoration(
+          color: context.cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: context.borderColor,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: isDeposit
+                        ? const _DepositThumbnail()
+                        : _FoodThumbnail(order: order),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    isDeposit ? 'Top-up Details' : 'Order Details',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: context.textColor,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            isDeposit
+                ? _DepositDetails(order: order)
+                : _FoodOrderDetails(order: order),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Sort options bottom sheet ──────────────────────────────────────────────
+
+class _SortSheet extends StatelessWidget {
+  const _SortSheet({required this.current, required this.onSelected});
+
+  final _SortBy current;
+  final ValueChanged<_SortBy> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Container(
+        decoration: BoxDecoration(
+          color: context.cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: context.borderColor,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              'Sort By',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: context.textColor,
+              ),
+            ),
+            const SizedBox(height: 12),
+            for (final value in _SortBy.values)
+              _SortTile(
+                label: value.label,
+                icon: value.icon,
+                selected: current == value,
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  onSelected(value);
+                  Navigator.pop(context);
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SortTile extends StatelessWidget {
+  const _SortTile({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          color: selected
+              ? AppTheme.green.withValues(alpha: 0.1)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: selected ? AppTheme.green : context.borderColor,
+            width: selected ? 1.5 : 1.2,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 20,
+              color: selected ? AppTheme.green : context.mutedColor,
+            ),
+            const SizedBox(width: 12),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                color: selected ? AppTheme.green : context.textColor,
+              ),
+            ),
+            const Spacer(),
+            if (selected)
+              const Icon(Icons.check_circle_rounded,
+                  color: AppTheme.green, size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Expanded breakdown for food orders ─────────────────────────────────────
 
 class _FoodOrderDetails extends StatelessWidget {
   const _FoodOrderDetails({required this.order});
@@ -331,7 +1009,9 @@ class _FoodOrderDetails extends StatelessWidget {
             fontWeight: FontWeight.w600,
             color: order.status == 'Completed'
                 ? AppTheme.green
-                : const Color(0xFFFF9800),
+                : order.status == 'Failed'
+                    ? _kRed
+                    : _kGray,
           ),
         ),
       ],
@@ -339,7 +1019,7 @@ class _FoodOrderDetails extends StatelessWidget {
   }
 }
 
-// ── Expanded view for deposits ────────────────────────────────────────────
+// ── Expanded breakdown for deposits ────────────────────────────────────────
 
 class _DepositDetails extends StatelessWidget {
   const _DepositDetails({required this.order});
@@ -409,7 +1089,9 @@ class _DepositDetails extends StatelessWidget {
         const SizedBox(height: 8),
         _DetailRow(
           label: 'Transaction ID',
-          value: order.id.substring(0, 8).toUpperCase(),
+          value: order.id.length >= 8
+              ? order.id.substring(0, 8).toUpperCase()
+              : order.id.toUpperCase(),
           valueStyle: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w500,
@@ -439,6 +1121,7 @@ class _DetailRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
@@ -448,15 +1131,75 @@ class _DetailRow extends StatelessWidget {
             color: context.mutedColor,
           ),
         ),
-        Text(
-          value,
-          style: valueStyle ??
-              const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
+        const SizedBox(width: 16),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: valueStyle ??
+                const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
         ),
       ],
+    );
+  }
+}
+
+// ── Staggered fade-in wrapper for list items ───────────────────────────────
+
+class _FadeInItem extends StatefulWidget {
+  const _FadeInItem({
+    super.key,
+    required this.index,
+    required this.child,
+  });
+
+  final int index;
+  final Widget child;
+
+  @override
+  State<_FadeInItem> createState() => _FadeInItemState();
+}
+
+class _FadeInItemState extends State<_FadeInItem>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _fade;
+  late final Animation<Offset> _slide;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 400),
+      vsync: this,
+    );
+    _fade = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+    _slide = Tween<Offset>(
+      begin: const Offset(0, 0.12),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+    // Stagger by index, capped so long lists don't lag.
+    final delay = Duration(milliseconds: 60 * (widget.index.clamp(0, 8)));
+    Future.delayed(delay, () {
+      if (mounted) _controller.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _fade,
+      child: SlideTransition(position: _slide, child: widget.child),
     );
   }
 }
