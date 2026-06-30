@@ -5,7 +5,7 @@ import '../digital_wallet/history_screen.dart';
 import '../digital_wallet/qr_screen.dart';
 import '../home/home_screen.dart';
 import '../menu_browsing/menu_screen.dart';
-import '../profile/profile_screen.dart';
+import '../settings/settings_screen.dart';
 
 /// Exposes [setTab] to any descendant inside the shell.
 class AppShellScope extends InheritedWidget {
@@ -72,7 +72,7 @@ class _AppShellState extends State<AppShell> {
             MenuScreen(),
             QrScreen(),
             HistoryScreen(),
-            ProfileScreen(),
+            SettingsScreen(),
           ],
         ),
         bottomNavigationBar: SmartCanteenNavigationBarButton(

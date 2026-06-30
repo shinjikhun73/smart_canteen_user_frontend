@@ -20,7 +20,7 @@ import 'ui/screens/login/sign_up_screen.dart';
 import 'ui/screens/login/view_model/auth_view_model.dart';
 import 'ui/screens/menu_browsing/menu_screen.dart';
 import 'ui/screens/menu_browsing/view_model/menu_view_model.dart';
-import 'ui/screens/profile/profile_screen.dart';
+import 'ui/screens/settings/settings_screen.dart';
 import 'ui/screens/settings/about_screen.dart';
 import 'ui/screens/settings/edit_profile_screen.dart';
 import 'ui/screens/settings/notification_settings_screen.dart';
@@ -116,7 +116,7 @@ class _SmartCanteenAppState extends State<SmartCanteenApp> {
               OrderSummaryScreen.routeName: (_) => const OrderSummaryScreen(),
               QrScreen.routeName: (_) => const QrScreen(),
               HistoryScreen.routeName: (_) => const HistoryScreen(),
-              ProfileScreen.routeName: (_) => const ProfileScreen(),
+              SettingsScreen.routeName: (_) => const SettingsScreen(),
               NotificationScreen.routeName: (_) => const NotificationScreen(),
               EditProfileScreen.routeName: (_) => const EditProfileScreen(),
               PaymentMethodsScreen.routeName: (_) =>

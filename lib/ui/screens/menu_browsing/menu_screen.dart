@@ -9,6 +9,7 @@ import '../../../ui/states/balance_state.dart';
 import '../../../ui/states/order_history_state.dart';
 import '../../widgets/cart_bar.dart';
 import '../../widgets/payment_method_sheet.dart';
+import '../../widgets/payment_success_dialog.dart';
 
 enum _SortBy { recommended, priceLowHigh, priceHighLow, rating }
 
@@ -123,14 +124,14 @@ class _MenuScreenState extends State<MenuScreen> {
               orderHistory.updateOrderStatus(orderId, 'Completed');
             });
 
-            scaffoldMessenger.showSnackBar(
-              const SnackBar(
-                content: Text('Payment successful! Order added to history.'),
-                behavior: SnackBarBehavior.floating,
-                backgroundColor: AppTheme.green,
-                duration: Duration(seconds: 2),
-              ),
-            );
+            // Confirm with the processing → success modal (order already saved).
+            if (context.mounted) {
+              PaymentSuccessDialog.show(
+                context,
+                amount: order.total,
+                onDismiss: () {},
+              );
+            }
           } catch (e) {
             scaffoldMessenger.showSnackBar(
               SnackBar(
@@ -410,14 +411,6 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
   void _addItem() {
     final cart = CartProvider.of(context);
     cart.add(widget.item);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${widget.item.name} added to cart'),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-        backgroundColor: AppTheme.green.withValues(alpha: 0.9),
-      ),
-    );
   }
 
   void _increment() {
@@ -427,19 +420,7 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
 
   void _decrement() {
     final cart = CartProvider.of(context);
-    final quantityBefore = cart.quantityOf(widget.item.id);
     cart.decrement(widget.item.id);
-
-    if (quantityBefore == 1) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${widget.item.name} removed from cart'),
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 2),
-          backgroundColor: AppTheme.green.withValues(alpha: 0.9),
-        ),
-      );
-    }
   }
 
   int _getCartQuantity() {

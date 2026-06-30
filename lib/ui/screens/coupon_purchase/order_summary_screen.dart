@@ -7,6 +7,7 @@ import '../../../theme/app_theme.dart';
 import '../../../ui/states/balance_state.dart';
 import '../../../ui/states/order_history_state.dart';
 import '../../widgets/payment_method_sheet.dart';
+import '../../widgets/payment_success_dialog.dart';
 import '../../widgets/smart_canteen_widgets.dart';
 
 class OrderSummaryScreen extends StatelessWidget {
@@ -29,7 +30,7 @@ class OrderSummaryScreen extends StatelessWidget {
               await balanceState.payment(amount);
             }
             if (context.mounted) {
-              _showPaymentSuccess(context);
+              _showPaymentSuccess(context, amount);
             }
           } catch (e) {
             if (context.mounted) {
@@ -48,94 +49,44 @@ class OrderSummaryScreen extends StatelessWidget {
     );
   }
 
-  void _showPaymentSuccess(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        contentPadding: const EdgeInsets.all(28),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                color: AppTheme.green.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.check_circle_outline,
-                color: AppTheme.green,
-                size: 40,
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Payment Successful!',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: AppTheme.text,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Your order has been placed.\nPlease collect at the counter.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: AppTheme.mutedText,
-                fontSize: 13,
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 24),
-            SmartCanteenButton(
-              label: 'Back to Home',
-              onPressed: () {
-                final cart = CartProvider.of(context);
-                final itemsLabel = cart.entries
-                    .map(
-                      (e) => e.quantity > 1
-                          ? '${e.item.name} ×${e.quantity}'
-                          : e.item.name,
-                    )
-                    .join(', ');
-                final firstEntry = cart.entries.isNotEmpty
-                    ? cart.entries.first
-                    : null;
-                final orderId = DateTime.now().millisecondsSinceEpoch
-                    .toString();
-                final historyState = context.read<OrderHistoryState>();
-                historyState.addOrder(
-                  OrderRecord(
-                    id: orderId,
-                    date: _formatNow(),
-                    items: itemsLabel,
-                    total: cart.total,
-                    status: 'Pending',
-                    session: _inferSession(),
-                    imagePath: firstEntry?.item.imagePath,
-                    colorSeed: firstEntry?.item.colorSeed ?? 0,
-                  ),
-                );
-                // Auto-complete after 3 seconds to simulate canteen processing
-                Future.delayed(const Duration(seconds: 7), () {
-                  historyState.updateOrderStatus(orderId, 'Completed');
-                });
-                cart.clear();
-                Navigator.pushNamedAndRemoveUntil(
-                  context,
-                  '/home',
-                  (_) => false,
-                );
-              },
-            ),
-          ],
-        ),
+  void _showPaymentSuccess(BuildContext context, double amount) {
+    PaymentSuccessDialog.show(
+      context,
+      amount: amount,
+      buttonLabel: 'Back to Home',
+      // Runs once — whether the user taps the button or it auto-dismisses.
+      onDismiss: () => _completeOrder(context),
+    );
+  }
+
+  void _completeOrder(BuildContext context) {
+    final cart = CartProvider.of(context);
+    final itemsLabel = cart.entries
+        .map(
+          (e) => e.quantity > 1 ? '${e.item.name} ×${e.quantity}' : e.item.name,
+        )
+        .join(', ');
+    final firstEntry = cart.entries.isNotEmpty ? cart.entries.first : null;
+    final orderId = DateTime.now().millisecondsSinceEpoch.toString();
+    final historyState = context.read<OrderHistoryState>();
+    historyState.addOrder(
+      OrderRecord(
+        id: orderId,
+        date: _formatNow(),
+        items: itemsLabel,
+        total: cart.total,
+        status: 'Pending',
+        session: _inferSession(),
+        imagePath: firstEntry?.item.imagePath,
+        colorSeed: firstEntry?.item.colorSeed ?? 0,
       ),
     );
+    // Auto-complete after a delay to simulate canteen processing.
+    Future.delayed(const Duration(seconds: 7), () {
+      historyState.updateOrderStatus(orderId, 'Completed');
+    });
+    cart.clear();
+    Navigator.pushNamedAndRemoveUntil(context, '/home', (_) => false);
   }
 
   @override
@@ -261,7 +212,7 @@ class OrderSummaryScreen extends StatelessWidget {
             case 3:
               Navigator.pushReplacementNamed(context, '/history');
             case 4:
-              Navigator.pushReplacementNamed(context, '/profile');
+              Navigator.pushReplacementNamed(context, '/settings');
           }
         },
       ),

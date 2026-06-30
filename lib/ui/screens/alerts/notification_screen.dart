@@ -60,7 +60,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
             case 1: Navigator.pushReplacementNamed(context, '/menu');
             case 2: Navigator.pushNamed(context, '/qr');
             case 3: Navigator.pushNamed(context, '/history');
-            case 4: Navigator.pushNamed(context, '/profile');
+            case 4: Navigator.pushNamed(context, '/settings');
           }
         },
       ),

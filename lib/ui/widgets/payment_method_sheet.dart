@@ -19,6 +19,7 @@ class _BankOption {
     required this.gradientStart,
     required this.gradientEnd,
     required this.brandColor,
+    this.logoAsset,
     this.isWallet = false,
   });
 
@@ -29,6 +30,9 @@ class _BankOption {
   final Color gradientStart;
   final Color gradientEnd;
   final Color brandColor;
+
+  /// Brand logo asset; when set it replaces the icon/short-code badge.
+  final String? logoAsset;
   final bool isWallet;
 }
 
@@ -53,6 +57,7 @@ const _kOptions = [
     gradientStart: Color(0xFFC62828),
     gradientEnd: Color(0xFFEF5350),
     brandColor: Color(0xFFC62828),
+    logoAsset: 'asset/payment method/bakong.png',
   ),
   _BankOption(
     name: 'Pay with ABA Pay',
@@ -62,6 +67,7 @@ const _kOptions = [
     gradientStart: Color(0xFF1565C0),
     gradientEnd: Color(0xFF42A5F5),
     brandColor: Color(0xFF1565C0),
+    logoAsset: 'asset/payment method/aba.png',
   ),
   _BankOption(
     name: 'Pay with ACLEDA',
@@ -71,6 +77,7 @@ const _kOptions = [
     gradientStart: Color(0xFF1A237E),
     gradientEnd: Color(0xFF3949AB),
     brandColor: Color(0xFF1A237E),
+    logoAsset: 'asset/payment method/acleda.png',
   ),
 ];
 
@@ -431,6 +438,31 @@ class _LogoBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Brand logos sit on a clean white chip so they stay recognizable.
+    if (option.logoAsset != null) {
+      return Container(
+        width: 50,
+        height: 50,
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: selected ? AppTheme.green : option.brandColor.withValues(alpha: 0.15),
+            width: selected ? 1.6 : 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: option.brandColor.withValues(alpha: 0.18),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Image.asset(option.logoAsset!, fit: BoxFit.contain),
+      );
+    }
+
     return AnimatedContainer(
       duration: const Duration(milliseconds: 260),
       width: 50, // ← smaller (was 58)

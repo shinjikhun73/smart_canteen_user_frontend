@@ -57,8 +57,11 @@ class AboutScreen extends StatelessWidget {
                               ),
                             ],
                           ),
-                          child: const Icon(Icons.restaurant_rounded,
-                              color: Colors.white, size: 42),
+                          child: const Icon(
+                            Icons.restaurant_rounded,
+                            color: Colors.white,
+                            size: 42,
+                          ),
                         ),
                         const SizedBox(height: 16),
                         Text(
@@ -127,12 +130,12 @@ class AboutScreen extends StatelessWidget {
                       const SettingsTile(
                         icon: Icons.code_rounded,
                         title: 'Built by',
-                        subtitle: 'SCMS Team — CADT',
+                        subtitle: 'SCMS Team — Ekreach Digital',
                       ),
                       SettingsTile(
                         icon: Icons.mail_outline_rounded,
                         title: 'Contact',
-                        subtitle: 'support@cadt.edu.kh',
+                        subtitle: 'sokhunmonys@cadt.edu.kh',
                         onTap: () => _comingSoon(context, 'Contact'),
                         isLast: true,
                       ),
@@ -145,7 +148,7 @@ class AboutScreen extends StatelessWidget {
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
                     child: Text(
-                      '© 2026 Smart Canteen Management System\nMade with 💚 at CADT',
+                      '© 2026 Smart Canteen Management System\nBy Ekreach Digital. \nAll rights reserved.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 11.5,

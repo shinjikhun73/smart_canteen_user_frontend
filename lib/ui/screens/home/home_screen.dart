@@ -14,6 +14,7 @@ import '../../../ui/utils/async_value.dart';
 import '../../../ui/utils/currency_formatter.dart';
 import '../../widgets/cart_bar.dart';
 import '../../widgets/payment_method_sheet.dart';
+import '../../widgets/payment_success_dialog.dart';
 import '../../widgets/smart_canteen_widgets.dart';
 import '../shell/app_shell.dart';
 
@@ -108,14 +109,14 @@ class _HomeScreenState extends State<HomeScreen> {
               orderHistory.updateOrderStatus(orderId, 'Completed');
             });
 
-            scaffoldMessenger.showSnackBar(
-              const SnackBar(
-                content: Text('Payment successful! Order added to history.'),
-                behavior: SnackBarBehavior.floating,
-                backgroundColor: AppTheme.green,
-                duration: Duration(seconds: 2),
-              ),
-            );
+            // Confirm with the processing → success modal (order already saved).
+            if (context.mounted) {
+              PaymentSuccessDialog.show(
+                context,
+                amount: order.total,
+                onDismiss: () {},
+              );
+            }
           } catch (e) {
             scaffoldMessenger.showSnackBar(
               SnackBar(

@@ -15,24 +15,24 @@ import '../../../ui/utils/animation_utils.dart';
 import '../../../ui/utils/async_value.dart';
 import '../../widgets/app_dialog.dart';
 import '../../widgets/settings_widgets.dart';
-import '../settings/about_screen.dart';
-import '../settings/edit_profile_screen.dart';
-import '../settings/notification_settings_screen.dart';
-import '../settings/payment_methods_screen.dart';
 import '../shell/app_shell.dart';
+import 'about_screen.dart';
+import 'edit_profile_screen.dart';
+import 'notification_settings_screen.dart';
+import 'payment_methods_screen.dart';
 
 const Color _kRed = Color(0xFFE53935);
 
-class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+class SettingsScreen extends StatefulWidget {
+  const SettingsScreen({super.key});
 
-  static const routeName = '/profile';
+  static const routeName = '/settings';
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _SettingsScreenState extends State<SettingsScreen> {
   final _picker = ImagePicker();
 
   Future<void> _pickImage(ImageSource source) async {
@@ -317,7 +317,7 @@ class _Header extends StatelessWidget {
           Row(
             children: [
               const Text(
-                'My Profile',
+                'Settings',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 20,

@@ -13,13 +13,13 @@ class SmartCanteenNavigationBarButton extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
 
-  static const _labels = ['Home', 'Menu', 'QR Pay', 'History', 'Profile'];
+  static const _labels = ['Home', 'Menu', 'QR Pay', 'History', 'Settings'];
   static const _icons = [
     Icons.home_rounded,
     Icons.restaurant_menu_rounded,
     Icons.qr_code_2,
     Icons.receipt_long_rounded,
-    Icons.person_rounded,
+    Icons.settings_rounded,
   ];
 
   @override
