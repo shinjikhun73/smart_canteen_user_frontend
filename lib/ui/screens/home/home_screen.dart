@@ -2253,7 +2253,7 @@ class _TopUpPaymentSheetState extends State<_TopUpPaymentSheet> {
                   radius: 14,
                   onPressed: () {
                     Navigator.pop(context);
-                    widget.onConfirm(_kTopUpMethods[_selected!].code);
+                    widget.onConfirm(_kTopUpMethods[_selected!].name);
                   },
                 ),
               ),
@@ -2470,30 +2470,37 @@ Future<void> _doTopUp(
     ),
   );
 
-  ScaffoldMessenger.of(ctx).showSnackBar(
-    SnackBar(
-      behavior: SnackBarBehavior.floating,
-      backgroundColor: success ? AppTheme.green : const Color(0xFFE53935),
-      content: Row(
-        children: [
-          Icon(
-            success ? Icons.check_circle_rounded : Icons.error_rounded,
-            color: Colors.white,
-            size: 18,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              success
-                  ? '$label top-up via $method successful!'
-                  : 'Top-up failed. Please try again.',
-              style: const TextStyle(fontWeight: FontWeight.w600),
+  if (success) {
+    // Hand off from the processing dialog straight to the success modal.
+    PaymentSuccessDialog.show(
+      ctx,
+      processingDuration: Duration.zero,
+      amount: amount,
+      title: 'Top-up Successful!',
+      message: '\$${amount.toStringAsFixed(2)} added via $method',
+      buttonLabel: 'Continue',
+      onDismiss: () {},
+    );
+  } else {
+    ScaffoldMessenger.of(ctx).showSnackBar(
+      const SnackBar(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Color(0xFFE53935),
+        content: Row(
+          children: [
+            Icon(Icons.error_rounded, color: Colors.white, size: 18),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Top-up failed. Please try again.',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 String _formatNow() {

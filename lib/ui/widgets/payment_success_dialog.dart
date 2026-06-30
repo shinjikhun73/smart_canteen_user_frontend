@@ -105,8 +105,16 @@ class _PaymentSuccessDialogState extends State<PaymentSuccessDialog>
       curve: const Interval(0.45, 1.0, curve: Curves.easeInOut),
     );
 
-    // Simulate payment processing, then reveal success.
-    _processingTimer = Timer(widget.processingDuration, _toSuccess);
+    if (widget.processingDuration == Duration.zero) {
+      // Caller already showed a processing step — open straight to success.
+      _phase = _Phase.success;
+      _entryController.forward();
+      HapticFeedback.mediumImpact();
+      _autoTimer = Timer(widget.autoDismiss, _close);
+    } else {
+      // Simulate payment processing, then reveal success.
+      _processingTimer = Timer(widget.processingDuration, _toSuccess);
+    }
   }
 
   void _toSuccess() {
