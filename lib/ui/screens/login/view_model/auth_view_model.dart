@@ -53,6 +53,23 @@ class AuthViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Signs in with Google. Uses the same [loginState] as [login] since,
+  /// from the UI's perspective, it's just another way to end up logged in.
+  Future<void> loginWithGoogle() async {
+    _loginState = const AsyncLoading();
+    notifyListeners();
+
+    try {
+      await _authRepository.loginWithGoogle();
+      final profileDto = await _authRepository.getProfile();
+      _loginState = AsyncData(User.fromDto(profileDto));
+    } catch (e, s) {
+      _loginState = AsyncError(e, s);
+    }
+
+    notifyListeners();
+  }
+
   Future<void> logout() async {
     await _authRepository.logout();
     _loginState = const AsyncLoading();

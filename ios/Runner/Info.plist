@@ -6,6 +6,25 @@
 	<string>Take a photo for your profile picture</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Choose a photo from your gallery for your profile picture</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Used in development to reach the Smart Canteen backend running on your computer</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<!-- Reversed iOS OAuth client ID — lets Google Sign-In return to the app. -->
+				<string>com.googleusercontent.apps.421411286734-i0r7db6pd4ijhcgugquadfnkdnca1dfu</string>
+			</array>
+		</dict>
+	</array>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

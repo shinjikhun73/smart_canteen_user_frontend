@@ -1,14 +1,53 @@
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, kIsWeb, TargetPlatform;
+import 'package:dio/dio.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+
 import '../../config/api_config.dart';
+import '../../config/google_auth_config.dart';
 import '../../dtos/auth_dto.dart';
+import '../../exceptions/api_exception.dart';
+import '../../local/token_storage.dart';
 import 'auth_repository.dart';
 
 class AuthRepositoryNestjs implements AuthRepository {
-  // TODO: inject an HTTP client (e.g. Dio) here
-  // final Dio _dio;
+  AuthRepositoryNestjs({Dio? dio, TokenStorage? tokenStorage})
+      : _tokenStorage = tokenStorage ?? TokenStorage.instance,
+        _dio = dio ??
+            Dio(
+              BaseOptions(
+                baseUrl: ApiConfig.baseUrl,
+                connectTimeout: const Duration(seconds: 15),
+                receiveTimeout: const Duration(seconds: 15),
+              ),
+            ) {
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) async {
+          final token = await _tokenStorage.readAccessToken();
+          if (token != null) {
+            options.headers['Authorization'] = 'Bearer $token';
+          }
+          handler.next(options);
+        },
+      ),
+    );
+  }
+
+  final Dio _dio;
+  final TokenStorage _tokenStorage;
+  Future<void>? _googleSignInInit;
 
   @override
-  Future<AuthTokenDto> login({required String email, required String password}) {
-    throw UnimplementedError('Connect ${ApiConfig.login} endpoint');
+  Future<AuthTokenDto> login({
+    required String email,
+    required String password,
+  }) async {
+    final response = await _post(ApiConfig.login, {
+      'email': email,
+      'password': password,
+    });
+    return _extractTokens(response);
   }
 
   @override
@@ -16,22 +55,137 @@ class AuthRepositoryNestjs implements AuthRepository {
     required String email,
     required String password,
     required String fullName,
-  }) {
-    throw UnimplementedError('Connect ${ApiConfig.register} endpoint');
+  }) async {
+    final nameParts = fullName.trim().split(RegExp(r'\s+'));
+    final response = await _post(ApiConfig.register, {
+      'email': email,
+      'password': password,
+      'first_name': nameParts.isNotEmpty ? nameParts.first : null,
+      'last_name': nameParts.length > 1 ? nameParts.sublist(1).join(' ') : null,
+    });
+    return _extractTokens(response);
   }
 
   @override
-  Future<AuthTokenDto> refreshToken(String refreshToken) {
-    throw UnimplementedError('Connect ${ApiConfig.refreshToken} endpoint');
+  Future<AuthTokenDto> loginWithGoogle() async {
+    await _ensureGoogleSignInInitialized();
+
+    final GoogleSignInAccount account;
+    try {
+      account = await GoogleSignIn.instance.authenticate();
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled) {
+        throw const ApiException('Google sign-in was cancelled');
+      }
+      throw ApiException('Google sign-in failed: ${e.description ?? e.code}');
+    }
+
+    final idToken = account.authentication.idToken;
+    if (idToken == null || idToken.isEmpty) {
+      throw const ApiException(
+        'Google returned no ID token. This usually means the OAuth client for '
+        'this platform is not configured in Google Cloud Console (check the '
+        'package name / SHA-1 for Android, or the bundle ID for iOS), or the '
+        'serverClientId is wrong.',
+      );
+    }
+
+    final response = await _post(ApiConfig.googleLogin, {'id_token': idToken});
+    return _extractTokens(response);
+  }
+
+  Future<void> _ensureGoogleSignInInitialized() {
+    return _googleSignInInit ??= GoogleSignIn.instance.initialize(
+      clientId: _platformClientId,
+      serverClientId: GoogleAuthConfig.serverClientId,
+    );
+  }
+
+  /// The native client ID for the current platform. iOS needs its own client
+  /// ID; Android reads it from `google-services.json`, and web uses the
+  /// serverClientId, so both are left null here.
+  String? get _platformClientId {
+    if (kIsWeb) return null;
+    return defaultTargetPlatform == TargetPlatform.iOS
+        ? GoogleAuthConfig.iosClientId
+        : null;
   }
 
   @override
-  Future<UserProfileDto> getProfile() {
-    throw UnimplementedError('Connect /auth/profile endpoint');
+  Future<AuthTokenDto> refreshToken(String refreshToken) async {
+    final response = await _post(ApiConfig.refreshToken, {
+      'refresh_token': refreshToken,
+    });
+    final tokens = AuthTokenDto.fromJson(
+      response.data['data'] as Map<String, dynamic>,
+    );
+    await _tokenStorage.saveTokens(
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+    );
+    return tokens;
   }
 
   @override
-  Future<void> logout() {
-    throw UnimplementedError('Connect ${ApiConfig.logout} endpoint');
+  Future<UserProfileDto> getProfile() async {
+    try {
+      final response = await _dio.get(ApiConfig.profile);
+      return UserProfileDto.fromJson(
+        response.data['data'] as Map<String, dynamic>,
+      );
+    } on DioException catch (e) {
+      throw _mapError(e);
+    } catch (e) {
+      throw ApiException('Unexpected error loading profile: $e');
+    }
+  }
+
+  @override
+  Future<void> logout() async {
+    try {
+      await _dio.post(ApiConfig.logout);
+    } on DioException {
+      // Best-effort: even if the server call fails, clear the local session.
+    } finally {
+      await _tokenStorage.clear();
+      final signedIn = await GoogleSignIn.instance.attemptLightweightAuthentication();
+      if (signedIn != null) {
+        await GoogleSignIn.instance.signOut();
+      }
+    }
+  }
+
+  Future<Response<dynamic>> _post(String path, Map<String, dynamic> data) async {
+    try {
+      final response = await _dio.post(path, data: data);
+      return response;
+    } on DioException catch (e) {
+      throw _mapError(e);
+    } catch (e) {
+      throw ApiException('Unexpected error calling $path: $e');
+    }
+  }
+
+  Future<AuthTokenDto> _extractTokens(Response<dynamic> response) async {
+    final tokens = AuthTokenDto.fromJson(
+      response.data['data'] as Map<String, dynamic>,
+    );
+    await _tokenStorage.saveTokens(
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+    );
+    return tokens;
+  }
+
+  ApiException _mapError(DioException e) {
+    final data = e.response?.data;
+    final message = data is Map<String, dynamic> ? data['message'] : null;
+    if (message is String) {
+      return ApiException(message, statusCode: e.response?.statusCode);
+    }
+    // No response reached the app at all (connection refused, CORS block,
+    // timeout, DNS failure, ...) — surface Dio's own diagnosis rather than a
+    // vague string, since this is a network-layer failure, not a backend one.
+    return ApiException('${e.type.name}: ${e.message ?? e.error ?? e}');
   }
 }

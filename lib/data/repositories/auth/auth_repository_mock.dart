@@ -27,6 +27,16 @@ class AuthRepositoryMock implements AuthRepository {
   }
 
   @override
+  Future<AuthTokenDto> loginWithGoogle() async {
+    await Future.delayed(const Duration(seconds: 1));
+    return const AuthTokenDto(
+      accessToken: 'mock-google-access-token',
+      refreshToken: 'mock-refresh-token',
+      expiresIn: 3600,
+    );
+  }
+
+  @override
   Future<AuthTokenDto> refreshToken(String refreshToken) async {
     await Future.delayed(const Duration(milliseconds: 300));
     return const AuthTokenDto(
@@ -42,10 +52,11 @@ class AuthRepositoryMock implements AuthRepository {
     return const UserProfileDto(
       id: 'mock-user-001',
       email: 'john.doe@cadt.edu.kh',
-      fullName: 'John Doe',
-      studentId: '20230042',
-      institution: 'CADT',
-      role: 'scholar',
+      firstName: 'John',
+      lastName: 'Doe',
+      status: 'active',
+      role: RoleDto(id: 'mock-role-student', name: 'student'),
+      school: SchoolDto(id: 'mock-school-cadt', name: 'CADT'),
     );
   }
 

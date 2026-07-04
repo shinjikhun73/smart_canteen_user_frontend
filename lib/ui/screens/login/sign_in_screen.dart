@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../../../data/exceptions/api_exception.dart';
+import '../../../model/user/user.dart';
 import '../../../theme/app_theme.dart';
+import '../../../ui/utils/async_value.dart';
 import '../../widgets/smart_canteen_widgets.dart';
 import '../home/home_screen.dart';
+import 'view_model/auth_view_model.dart';
 
 /// Brand gradient used for the primary action buttons (#4CAF50 → #81C784).
 const _primaryGradient = LinearGradient(
@@ -13,6 +18,24 @@ const _primaryGradient = LinearGradient(
 
 const _googleBlue = Color(0xFF4285F4);
 const _facebookBlue = Color(0xFF1877F2);
+
+void _showComingSoon(BuildContext context, String feature) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text('$feature — coming soon'),
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: AppTheme.green,
+    ),
+  );
+}
+
+/// Turns a caught error into copy a user can act on. [ApiException] carries
+/// the backend's actual message (see backend `AllExceptionsFilter`); anything
+/// else (timeouts, no connection, Google Sign-In failures) gets a fallback.
+String _describeError(Object error) {
+  if (error is ApiException) return error.message;
+  return 'Something went wrong. Please try again.';
+}
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key, this.initialIsLogin = true});
@@ -32,16 +55,6 @@ class _SignInScreenState extends State<SignInScreen> {
   void initState() {
     super.initState();
     _isLogin = widget.initialIsLogin;
-  }
-
-  void _showComingSoon(String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$feature — coming soon'),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: AppTheme.green,
-      ),
-    );
   }
 
   @override
@@ -135,7 +148,6 @@ class _SignInScreenState extends State<SignInScreen> {
                                   context,
                                   HomeScreen.routeName,
                                 ),
-                                onComingSoon: _showComingSoon,
                               )
                             : _SignUpForm(
                                 key: const ValueKey('signup'),
@@ -143,7 +155,6 @@ class _SignInScreenState extends State<SignInScreen> {
                                   context,
                                   HomeScreen.routeName,
                                 ),
-                                onComingSoon: _showComingSoon,
                               ),
                       ),
                     ],
@@ -245,51 +256,152 @@ class _AuthHeader extends StatelessWidget {
   }
 }
 
+// ── Inline error banner ───────────────────────────────────────────────────────
+
+class _ErrorBanner extends StatelessWidget {
+  const _ErrorBanner({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.red.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.red.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.error_outline, color: Colors.red.shade600, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                color: Colors.red.shade700,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ── Login form ──────────────────────────────────────────────────────────────
 
-class _LoginForm extends StatelessWidget {
+class _LoginForm extends StatefulWidget {
   const _LoginForm({
     super.key,
     required this.rememberMe,
     required this.onRememberMeChanged,
     required this.onLogin,
-    required this.onComingSoon,
   });
 
   final bool rememberMe;
   final ValueChanged<bool?> onRememberMeChanged;
   final VoidCallback onLogin;
-  final void Function(String) onComingSoon;
+
+  @override
+  State<_LoginForm> createState() => _LoginFormState();
+}
+
+class _LoginFormState extends State<_LoginForm> {
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _isSubmitting = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit(Future<void> Function(AuthViewModel) action) async {
+    setState(() {
+      _isSubmitting = true;
+      _error = null;
+    });
+
+    final authViewModel = context.read<AuthViewModel>();
+    await action(authViewModel);
+    if (!mounted) return;
+
+    final state = authViewModel.loginState;
+    setState(() {
+      _isSubmitting = false;
+      _error = state is AsyncError<User> ? _describeError(state.error) : null;
+    });
+
+    if (state is AsyncData<User>) {
+      widget.onLogin();
+    }
+  }
+
+  Future<void> _handleLogin() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    if (email.isEmpty || password.isEmpty) {
+      setState(() => _error = 'Please fill in all fields.');
+      return;
+    }
+    await _submit((vm) => vm.login(email: email, password: password));
+  }
+
+  Future<void> _handleGoogleLogin() async {
+    await _submit((vm) => vm.loginWithGoogle());
+  }
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SmartCanteenTextField(
+        if (_error != null) ...[
+          _ErrorBanner(message: _error!),
+          const SizedBox(height: 16),
+        ],
+        SmartCanteenTextField(
+          controller: _emailController,
           label: 'Email Address',
           hintText: 'Enter your email',
           keyboardType: TextInputType.emailAddress,
-          prefixIcon: Icon(Icons.mail_outline, color: AppTheme.green, size: 20),
+          prefixIcon: const Icon(
+            Icons.mail_outline,
+            color: AppTheme.green,
+            size: 20,
+          ),
         ),
         const SizedBox(height: 18),
-        const SmartCanteenTextField(
+        SmartCanteenTextField(
+          controller: _passwordController,
           label: 'Password',
           hintText: 'Enter your password',
           obscureText: true,
-          prefixIcon: Icon(Icons.lock_outline, color: AppTheme.green, size: 20),
+          prefixIcon: const Icon(
+            Icons.lock_outline,
+            color: AppTheme.green,
+            size: 20,
+          ),
         ),
         const SizedBox(height: 12),
         Row(
           children: [
             Checkbox(
-              value: rememberMe,
+              value: widget.rememberMe,
               activeColor: AppTheme.green,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(6),
               ),
               side: const BorderSide(color: Color(0xFFE8E8E8), width: 1.5),
-              onChanged: onRememberMeChanged,
+              onChanged: widget.onRememberMeChanged,
             ),
             const Text(
               'Remember me',
@@ -300,19 +412,25 @@ class _LoginForm extends StatelessWidget {
               ),
             ),
             const Spacer(),
-            _ForgotPasswordButton(onTap: () => onComingSoon('Password reset')),
+            _ForgotPasswordButton(
+              onTap: () => _showComingSoon(context, 'Password reset'),
+            ),
           ],
         ),
         const SizedBox(height: 24),
         SmartCanteenButton(
-          label: 'Log In',
-          onPressed: onLogin,
+          label: _isSubmitting ? 'Signing in…' : 'Log In',
+          onPressed: _isSubmitting ? null : _handleLogin,
           gradient: _primaryGradient,
         ),
         const SizedBox(height: 24),
         const SmartCanteenDividerText(label: 'OR CONTINUE WITH'),
         const SizedBox(height: 20),
-        _SocialRow(suffix: 'Sign-In', onComingSoon: onComingSoon),
+        _SocialRow(
+          suffix: 'Sign-In',
+          isBusy: _isSubmitting,
+          onGoogleTap: () => _handleGoogleLogin(),
+        ),
       ],
     );
   }
@@ -320,51 +438,154 @@ class _LoginForm extends StatelessWidget {
 
 // ── Sign-up form ────────────────────────────────────────────────────────────
 
-class _SignUpForm extends StatelessWidget {
-  const _SignUpForm({
-    super.key,
-    required this.onSignUp,
-    required this.onComingSoon,
-  });
+class _SignUpForm extends StatefulWidget {
+  const _SignUpForm({super.key, required this.onSignUp});
 
   final VoidCallback onSignUp;
-  final void Function(String) onComingSoon;
+
+  @override
+  State<_SignUpForm> createState() => _SignUpFormState();
+}
+
+class _SignUpFormState extends State<_SignUpForm> {
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmController = TextEditingController();
+  bool _isSubmitting = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit({
+    required Future<void> Function(AuthViewModel) action,
+    required AsyncValue<User> Function(AuthViewModel) stateOf,
+  }) async {
+    setState(() {
+      _isSubmitting = true;
+      _error = null;
+    });
+
+    final authViewModel = context.read<AuthViewModel>();
+    await action(authViewModel);
+    if (!mounted) return;
+
+    final state = stateOf(authViewModel);
+    setState(() {
+      _isSubmitting = false;
+      _error = state is AsyncError<User> ? _describeError(state.error) : null;
+    });
+
+    if (state is AsyncData<User>) {
+      widget.onSignUp();
+    }
+  }
+
+  Future<void> _handleSignUp() async {
+    final name = _nameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    final confirm = _confirmController.text;
+
+    if (name.isEmpty || email.isEmpty || password.isEmpty) {
+      setState(() => _error = 'Please fill in all fields.');
+      return;
+    }
+    if (password != confirm) {
+      setState(() => _error = 'Passwords do not match.');
+      return;
+    }
+
+    await _submit(
+      action: (vm) =>
+          vm.register(email: email, password: password, fullName: name),
+      stateOf: (vm) => vm.registerState,
+    );
+  }
+
+  Future<void> _handleGoogleSignUp() async {
+    await _submit(
+      action: (vm) => vm.loginWithGoogle(),
+      stateOf: (vm) => vm.loginState,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SmartCanteenTextField(
+        if (_error != null) ...[
+          _ErrorBanner(message: _error!),
+          const SizedBox(height: 16),
+        ],
+        SmartCanteenTextField(
+          controller: _nameController,
+          label: 'Full Name',
+          hintText: 'Enter your full name',
+          prefixIcon: const Icon(
+            Icons.person_outline,
+            color: AppTheme.green,
+            size: 20,
+          ),
+        ),
+        const SizedBox(height: 18),
+        SmartCanteenTextField(
+          controller: _emailController,
           label: 'Email Address',
           hintText: 'Enter your email',
           keyboardType: TextInputType.emailAddress,
-          prefixIcon: Icon(Icons.mail_outline, color: AppTheme.green, size: 20),
+          prefixIcon: const Icon(
+            Icons.mail_outline,
+            color: AppTheme.green,
+            size: 20,
+          ),
         ),
         const SizedBox(height: 18),
-        const SmartCanteenTextField(
+        SmartCanteenTextField(
+          controller: _passwordController,
           label: 'Password',
           hintText: 'Enter your password',
           obscureText: true,
-          prefixIcon: Icon(Icons.lock_outline, color: AppTheme.green, size: 20),
+          prefixIcon: const Icon(
+            Icons.lock_outline,
+            color: AppTheme.green,
+            size: 20,
+          ),
         ),
         const SizedBox(height: 18),
-        const SmartCanteenTextField(
+        SmartCanteenTextField(
+          controller: _confirmController,
           label: 'Confirm Password',
           hintText: 'Re-enter your password',
           obscureText: true,
-          prefixIcon: Icon(Icons.lock_outline, color: AppTheme.green, size: 20),
+          prefixIcon: const Icon(
+            Icons.lock_outline,
+            color: AppTheme.green,
+            size: 20,
+          ),
         ),
         const SizedBox(height: 24),
         SmartCanteenButton(
-          label: 'Sign Up',
-          onPressed: onSignUp,
+          label: _isSubmitting ? 'Signing up…' : 'Sign Up',
+          onPressed: _isSubmitting ? null : _handleSignUp,
           gradient: _primaryGradient,
         ),
         const SizedBox(height: 24),
         const SmartCanteenDividerText(label: 'OR CONTINUE WITH'),
         const SizedBox(height: 20),
-        _SocialRow(suffix: 'Sign-Up', onComingSoon: onComingSoon),
+        _SocialRow(
+          suffix: 'Sign-Up',
+          isBusy: _isSubmitting,
+          onGoogleTap: () => _handleGoogleSignUp(),
+        ),
       ],
     );
   }
@@ -373,10 +594,15 @@ class _SignUpForm extends StatelessWidget {
 // ── Shared social button row ─────────────────────────────────────────────────
 
 class _SocialRow extends StatelessWidget {
-  const _SocialRow({required this.suffix, required this.onComingSoon});
+  const _SocialRow({
+    required this.suffix,
+    required this.onGoogleTap,
+    this.isBusy = false,
+  });
 
   final String suffix;
-  final void Function(String) onComingSoon;
+  final VoidCallback onGoogleTap;
+  final bool isBusy;
 
   @override
   Widget build(BuildContext context) {
@@ -386,14 +612,16 @@ class _SocialRow extends StatelessWidget {
           label: 'Google',
           brandColor: _googleBlue,
           icon: _socialIcon(Icons.g_mobiledata, color: _googleBlue),
-          onTap: () => onComingSoon('Google $suffix'),
+          onTap: isBusy ? null : onGoogleTap,
         ),
         const SizedBox(width: 14),
         SmartCanteenSocialButton(
           label: 'Facebook',
           brandColor: _facebookBlue,
           icon: _socialIcon(Icons.facebook, color: _facebookBlue),
-          onTap: () => onComingSoon('Facebook $suffix'),
+          onTap: isBusy
+              ? null
+              : () => _showComingSoon(context, 'Facebook $suffix'),
         ),
       ],
     );
