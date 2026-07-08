@@ -41,6 +41,13 @@ class ApiConfig {
   static const String googleLogin = '/auth/google';
   static const String profile = '/users/me';
 
+  /// `PATCH /users/:id/profile` — update the signed-in user's own profile
+  /// (first/last name, phone, avatar, school). See backend `UsersController.updateProfile`.
+  static String userProfile(String id) => '/users/$id/profile';
+
+  /// `GET /schools` — list of selectable schools for onboarding.
+  static const String schools = '/schools';
+
   // Menu
   static const String weeklyMenu = '/menu/weekly';
   static const String menuBySession = '/menu/session';

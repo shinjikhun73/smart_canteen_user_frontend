@@ -7,6 +7,7 @@ class User {
   final String? lastName;
   final String? phone;
   final String? avatarUrl;
+  final String? schoolId;
   final String? schoolName;
   final UserRole role;
 
@@ -17,9 +18,26 @@ class User {
     this.lastName,
     this.phone,
     this.avatarUrl,
+    this.schoolId,
     this.schoolName,
     required this.role,
   });
+
+  /// True when we have no name on file — e.g. a Google account that didn't
+  /// share `given_name`/`family_name`.
+  bool get needsName =>
+      (firstName == null || firstName!.trim().isEmpty) &&
+      (lastName == null || lastName!.trim().isEmpty);
+
+  bool get _hasPhone => phone != null && phone!.trim().isNotEmpty;
+
+  bool get _hasSchool => schoolId != null && schoolId!.trim().isNotEmpty;
+
+  /// True until the user has supplied everything onboarding requires:
+  /// a name, a phone number, and a school. Gates the onboarding screen shown
+  /// after sign-in, so a freshly created (e.g. Google) account is sent there
+  /// while a returning, fully set-up account goes straight to the app.
+  bool get needsProfileCompletion => needsName || !_hasPhone || !_hasSchool;
 
   String get fullName {
     final name = [
@@ -44,6 +62,7 @@ class User {
         lastName: dto.lastName,
         phone: dto.phone,
         avatarUrl: dto.avatarUrl,
+        schoolId: dto.school?.id,
         schoolName: dto.school?.name,
         role: UserRole.fromString(dto.role?.name),
       );

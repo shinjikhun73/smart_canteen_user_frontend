@@ -1,0 +1,463 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../../data/dtos/auth_dto.dart';
+import '../../../data/exceptions/api_exception.dart';
+import '../../../data/repositories/auth/auth_repository.dart';
+import '../../../model/user/user.dart';
+import '../../../theme/app_theme.dart';
+import '../../../ui/utils/async_value.dart';
+import '../../states/user_profile_state.dart';
+import '../../widgets/smart_canteen_button.dart';
+import '../../widgets/smart_canteen_text_field.dart';
+import '../shell/app_shell.dart';
+import 'view_model/auth_view_model.dart';
+
+/// Brand gradient used for the primary action button (#4CAF50 → #81C784).
+const _primaryGradient = LinearGradient(
+  colors: [AppTheme.green, Color(0xFF81C784)],
+  begin: Alignment.centerLeft,
+  end: Alignment.centerRight,
+);
+
+String _describeError(Object error) {
+  if (error is ApiException) return error.message;
+  return 'Something went wrong. Please try again.';
+}
+
+/// Shown right after sign-in for an account whose profile is incomplete
+/// (missing name, phone, or school — typical for a freshly created Google
+/// account). Collects those details, patches them to the backend, then
+/// continues into the app.
+class CompleteProfileScreen extends StatefulWidget {
+  const CompleteProfileScreen({super.key, required this.user});
+
+  static const routeName = '/complete-profile';
+
+  final User user;
+
+  @override
+  State<CompleteProfileScreen> createState() => _CompleteProfileScreenState();
+}
+
+class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
+  late final TextEditingController _nameController;
+  late final TextEditingController _phoneController;
+
+  List<SchoolDto> _schools = const [];
+  String? _selectedSchoolId;
+  bool _loadingSchools = true;
+  String? _schoolsError;
+
+  bool _isSubmitting = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    final existingName = [widget.user.firstName, widget.user.lastName]
+        .where((p) => p != null && p.trim().isNotEmpty)
+        .join(' ');
+    _nameController = TextEditingController(text: existingName);
+    _phoneController = TextEditingController(text: widget.user.phone ?? '');
+    _selectedSchoolId = widget.user.schoolId;
+    _loadSchools();
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _phoneController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadSchools() async {
+    setState(() {
+      _loadingSchools = true;
+      _schoolsError = null;
+    });
+    try {
+      final schools = await context.read<AuthRepository>().getSchools();
+      if (!mounted) return;
+      setState(() {
+        _schools = schools;
+        // Drop a stale pre-selection that isn't in the list.
+        if (!schools.any((s) => s.id == _selectedSchoolId)) {
+          _selectedSchoolId = null;
+        }
+        _loadingSchools = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _schoolsError = _describeError(e);
+        _loadingSchools = false;
+      });
+    }
+  }
+
+  Future<void> _submit() async {
+    final name = _nameController.text.trim();
+    final phone = _phoneController.text.trim();
+    final schoolId = _selectedSchoolId;
+
+    if (name.isEmpty) {
+      setState(() => _error = 'Please enter your name.');
+      return;
+    }
+    if (phone.isEmpty) {
+      setState(() => _error = 'Please enter your phone number.');
+      return;
+    }
+    if (schoolId == null) {
+      setState(() => _error = 'Please select your school.');
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+      _error = null;
+    });
+
+    final authViewModel = context.read<AuthViewModel>();
+    final ok = await authViewModel.completeProfile(
+      userId: widget.user.id,
+      fullName: name,
+      phone: phone,
+      schoolId: schoolId,
+    );
+    if (!mounted) return;
+
+    if (ok) {
+      // Keep the local display state in sync so the name shows across the app.
+      context.read<UserProfileState>().updateProfile(
+            name: name,
+            email: widget.user.email,
+          );
+      Navigator.pushReplacementNamed(context, AppShell.routeName);
+      return;
+    }
+
+    final state = authViewModel.loginState;
+    setState(() {
+      _isSubmitting = false;
+      _error = state is AsyncError<User>
+          ? _describeError(state.error)
+          : 'Could not save your details. Please try again.';
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [AppTheme.greenSurface, Color(0xFFF7F8FA)],
+            begin: Alignment.topCenter,
+            end: Alignment.center,
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 24),
+                Center(
+                  child: Container(
+                    width: 84,
+                    height: 84,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: _primaryGradient,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.green.withValues(alpha: 0.3),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.badge_outlined,
+                      color: Colors.white,
+                      size: 40,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Complete your profile',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppTheme.greenDark,
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Add a few details to finish setting up your account.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppTheme.text.withValues(alpha: 0.5),
+                    fontSize: 14,
+                    height: 1.4,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.green.withValues(alpha: 0.08),
+                        blurRadius: 24,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 28,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (_error != null) ...[
+                        _ErrorBanner(message: _error!),
+                        const SizedBox(height: 16),
+                      ],
+                      SmartCanteenTextField(
+                        controller: _nameController,
+                        label: 'Full Name',
+                        hintText: 'Enter your full name',
+                        keyboardType: TextInputType.name,
+                        prefixIcon: const Icon(
+                          Icons.person_outline,
+                          color: AppTheme.green,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      _SchoolField(
+                        schools: _schools,
+                        selectedId: _selectedSchoolId,
+                        loading: _loadingSchools,
+                        error: _schoolsError,
+                        onChanged: (id) =>
+                            setState(() => _selectedSchoolId = id),
+                        onRetry: _loadSchools,
+                      ),
+                      const SizedBox(height: 18),
+                      SmartCanteenTextField(
+                        controller: _phoneController,
+                        label: 'Phone Number',
+                        hintText: 'Enter your phone number',
+                        keyboardType: TextInputType.phone,
+                        prefixIcon: const Icon(
+                          Icons.phone_outlined,
+                          color: AppTheme.green,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      SmartCanteenButton(
+                        label: _isSubmitting ? 'Saving…' : 'Continue',
+                        onPressed: _isSubmitting ? null : _submit,
+                        gradient: _primaryGradient,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── School picker ────────────────────────────────────────────────────────────
+
+class _SchoolField extends StatelessWidget {
+  const _SchoolField({
+    required this.schools,
+    required this.selectedId,
+    required this.loading,
+    required this.error,
+    required this.onChanged,
+    required this.onRetry,
+  });
+
+  final List<SchoolDto> schools;
+  final String? selectedId;
+  final bool loading;
+  final String? error;
+  final ValueChanged<String?> onChanged;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'School',
+          style: TextStyle(
+            color: AppTheme.green,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.2,
+          ),
+        ),
+        const SizedBox(height: 10),
+        if (loading)
+          const _FieldBox(
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                SizedBox(width: 12),
+                Text(
+                  'Loading schools…',
+                  style: TextStyle(color: AppTheme.mutedText, fontSize: 14),
+                ),
+              ],
+            ),
+          )
+        else if (error != null)
+          _FieldBox(
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    error!,
+                    style: TextStyle(color: Colors.red.shade700, fontSize: 13),
+                  ),
+                ),
+                TextButton(onPressed: onRetry, child: const Text('Retry')),
+              ],
+            ),
+          )
+        else
+          DropdownButtonFormField<String>(
+            initialValue: selectedId,
+            isExpanded: true,
+            icon: const Icon(Icons.arrow_drop_down, color: AppTheme.green),
+            hint: const Text(
+              'Select your school',
+              style: TextStyle(color: AppTheme.mutedText, fontSize: 15),
+            ),
+            items: [
+              for (final s in schools)
+                DropdownMenuItem(value: s.id, child: Text(s.name)),
+            ],
+            onChanged: onChanged,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+              color: AppTheme.text,
+            ),
+            decoration: InputDecoration(
+              prefixIcon: const Icon(
+                Icons.school_outlined,
+                color: AppTheme.green,
+                size: 20,
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 14,
+              ),
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(
+                  color: Color(0xFFE8E8E8),
+                  width: 1.5,
+                ),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(
+                  color: Color(0xFFE8E8E8),
+                  width: 1.5,
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppTheme.green, width: 2),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _FieldBox extends StatelessWidget {
+  const _FieldBox({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE8E8E8), width: 1.5),
+      ),
+      child: child,
+    );
+  }
+}
+
+// ── Inline error banner ──────────────────────────────────────────────────────
+
+class _ErrorBanner extends StatelessWidget {
+  const _ErrorBanner({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.red.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.red.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.error_outline, color: Colors.red.shade600, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                color: Colors.red.shade700,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

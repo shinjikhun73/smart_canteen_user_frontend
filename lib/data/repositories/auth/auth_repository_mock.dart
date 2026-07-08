@@ -60,6 +60,43 @@ class AuthRepositoryMock implements AuthRepository {
     );
   }
 
+  static const _mockSchools = [
+    SchoolDto(id: 'mock-school-cadt', name: 'CADT'),
+    SchoolDto(id: 'mock-school-rupp', name: 'RUPP'),
+    SchoolDto(id: 'mock-school-itc', name: 'ITC'),
+  ];
+
+  @override
+  Future<UserProfileDto> updateProfile({
+    required String userId,
+    String? firstName,
+    String? lastName,
+    String? phone,
+    String? schoolId,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 500));
+    final school = _mockSchools.firstWhere(
+      (s) => s.id == schoolId,
+      orElse: () => _mockSchools.first,
+    );
+    return UserProfileDto(
+      id: userId,
+      email: 'john.doe@cadt.edu.kh',
+      firstName: firstName,
+      lastName: lastName,
+      phone: phone,
+      status: 'active',
+      role: const RoleDto(id: 'mock-role-student', name: 'student'),
+      school: school,
+    );
+  }
+
+  @override
+  Future<List<SchoolDto>> getSchools() async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    return _mockSchools;
+  }
+
   @override
   Future<void> logout() async {
     await Future.delayed(const Duration(milliseconds: 300));

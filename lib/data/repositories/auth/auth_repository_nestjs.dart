@@ -141,6 +141,49 @@ class AuthRepositoryNestjs implements AuthRepository {
   }
 
   @override
+  Future<UserProfileDto> updateProfile({
+    required String userId,
+    String? firstName,
+    String? lastName,
+    String? phone,
+    String? schoolId,
+  }) async {
+    try {
+      final response = await _dio.patch(
+        ApiConfig.userProfile(userId),
+        data: {
+          'first_name': ?firstName,
+          'last_name': ?lastName,
+          'phone': ?phone,
+          'school_id': ?schoolId,
+        },
+      );
+      return UserProfileDto.fromJson(
+        response.data['data'] as Map<String, dynamic>,
+      );
+    } on DioException catch (e) {
+      throw _mapError(e);
+    } catch (e) {
+      throw ApiException('Unexpected error updating profile: $e');
+    }
+  }
+
+  @override
+  Future<List<SchoolDto>> getSchools() async {
+    try {
+      final response = await _dio.get(ApiConfig.schools);
+      final list = response.data['data'] as List<dynamic>;
+      return list
+          .map((e) => SchoolDto.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } on DioException catch (e) {
+      throw _mapError(e);
+    } catch (e) {
+      throw ApiException('Unexpected error loading schools: $e');
+    }
+  }
+
+  @override
   Future<void> logout() async {
     try {
       await _dio.post(ApiConfig.logout);
@@ -179,9 +222,28 @@ class AuthRepositoryNestjs implements AuthRepository {
 
   ApiException _mapError(DioException e) {
     final data = e.response?.data;
-    final message = data is Map<String, dynamic> ? data['message'] : null;
-    if (message is String) {
-      return ApiException(message, statusCode: e.response?.statusCode);
+    if (data is Map<String, dynamic>) {
+      // Validation failures (class-validator) carry the useful, field-level
+      // detail in `errors`; `message` is just a generic "Bad Request Exception".
+      // Prefer the specific reason when it's there. See backend
+      // `AllExceptionsFilter`.
+      final errors = data['errors'];
+      if (errors is List && errors.isNotEmpty) {
+        return ApiException(
+          errors.join('\n'),
+          statusCode: e.response?.statusCode,
+        );
+      }
+      final message = data['message'];
+      if (message is String) {
+        return ApiException(message, statusCode: e.response?.statusCode);
+      }
+      if (message is List && message.isNotEmpty) {
+        return ApiException(
+          message.join('\n'),
+          statusCode: e.response?.statusCode,
+        );
+      }
     }
     // No response reached the app at all (connection refused, CORS block,
     // timeout, DNS failure, ...) — surface Dio's own diagnosis rather than a

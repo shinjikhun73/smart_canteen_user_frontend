@@ -7,6 +7,7 @@ import '../../../theme/app_theme.dart';
 import '../../../ui/utils/async_value.dart';
 import '../../widgets/smart_canteen_widgets.dart';
 import '../home/home_screen.dart';
+import 'complete_profile_screen.dart';
 import 'view_model/auth_view_model.dart';
 
 /// Brand gradient used for the primary action buttons (#4CAF50 → #81C784).
@@ -35,6 +36,23 @@ void _showComingSoon(BuildContext context, String feature) {
 String _describeError(Object error) {
   if (error is ApiException) return error.message;
   return 'Something went wrong. Please try again.';
+}
+
+/// Where to send the user after a successful sign-in. Accounts with an
+/// incomplete profile (missing name, phone, or school — typical for a freshly
+/// created Google account) first pass through onboarding; everyone else goes
+/// straight to the app.
+void _routeAfterAuth(BuildContext context, User user) {
+  if (user.needsProfileCompletion) {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => CompleteProfileScreen(user: user),
+      ),
+    );
+  } else {
+    Navigator.pushReplacementNamed(context, HomeScreen.routeName);
+  }
 }
 
 class SignInScreen extends StatefulWidget {
@@ -324,7 +342,10 @@ class _LoginFormState extends State<_LoginForm> {
     super.dispose();
   }
 
-  Future<void> _submit(Future<void> Function(AuthViewModel) action) async {
+  Future<void> _submit(
+    Future<void> Function(AuthViewModel) action, {
+    void Function(User user)? onSuccess,
+  }) async {
     setState(() {
       _isSubmitting = true;
       _error = null;
@@ -341,7 +362,11 @@ class _LoginFormState extends State<_LoginForm> {
     });
 
     if (state is AsyncData<User>) {
-      widget.onLogin();
+      if (onSuccess != null) {
+        onSuccess(state.data);
+      } else {
+        widget.onLogin();
+      }
     }
   }
 
@@ -356,7 +381,10 @@ class _LoginFormState extends State<_LoginForm> {
   }
 
   Future<void> _handleGoogleLogin() async {
-    await _submit((vm) => vm.loginWithGoogle());
+    await _submit(
+      (vm) => vm.loginWithGoogle(),
+      onSuccess: (user) => _routeAfterAuth(context, user),
+    );
   }
 
   @override
@@ -467,6 +495,7 @@ class _SignUpFormState extends State<_SignUpForm> {
   Future<void> _submit({
     required Future<void> Function(AuthViewModel) action,
     required AsyncValue<User> Function(AuthViewModel) stateOf,
+    void Function(User user)? onSuccess,
   }) async {
     setState(() {
       _isSubmitting = true;
@@ -484,7 +513,11 @@ class _SignUpFormState extends State<_SignUpForm> {
     });
 
     if (state is AsyncData<User>) {
-      widget.onSignUp();
+      if (onSuccess != null) {
+        onSuccess(state.data);
+      } else {
+        widget.onSignUp();
+      }
     }
   }
 
@@ -514,6 +547,7 @@ class _SignUpFormState extends State<_SignUpForm> {
     await _submit(
       action: (vm) => vm.loginWithGoogle(),
       stateOf: (vm) => vm.loginState,
+      onSuccess: (user) => _routeAfterAuth(context, user),
     );
   }
 
@@ -611,14 +645,14 @@ class _SocialRow extends StatelessWidget {
         SmartCanteenSocialButton(
           label: 'Google',
           brandColor: _googleBlue,
-          icon: _socialIcon(Icons.g_mobiledata, color: _googleBlue),
+          icon: _socialIcon('asset/auth_logo/search.png'),
           onTap: isBusy ? null : onGoogleTap,
         ),
         const SizedBox(width: 14),
         SmartCanteenSocialButton(
           label: 'Facebook',
           brandColor: _facebookBlue,
-          icon: _socialIcon(Icons.facebook, color: _facebookBlue),
+          icon: _socialIcon('asset/auth_logo/facebook.png'),
           onTap: isBusy
               ? null
               : () => _showComingSoon(context, 'Facebook $suffix'),
@@ -698,16 +732,11 @@ class _ForgotPasswordButtonState extends State<_ForgotPasswordButton>
   }
 }
 
-Widget _socialIcon(IconData iconData, {required Color color}) {
-  return Container(
-    width: 24,
-    height: 24,
-    alignment: Alignment.center,
-    decoration: BoxDecoration(
-      color: Colors.white,
-      shape: BoxShape.circle,
-      border: Border.all(color: AppTheme.border),
-    ),
-    child: Icon(iconData, color: color, size: 18),
+Widget _socialIcon(String assetPath) {
+  return Image.asset(
+    assetPath,
+    width: 22,
+    height: 22,
+    fit: BoxFit.contain,
   );
 }

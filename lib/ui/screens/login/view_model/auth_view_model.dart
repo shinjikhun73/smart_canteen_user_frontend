@@ -70,6 +70,38 @@ class AuthViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Saves the onboarding details (name, phone, school) by splitting [fullName]
+  /// into first/last and patching the backend, then refreshes [loginState].
+  /// Returns true on success.
+  Future<bool> completeProfile({
+    required String userId,
+    required String fullName,
+    required String phone,
+    required String schoolId,
+  }) async {
+    final parts = fullName.trim().split(RegExp(r'\s+'));
+    final firstName = parts.isNotEmpty ? parts.first : null;
+    final lastName =
+        parts.length > 1 ? parts.sublist(1).join(' ') : null;
+
+    try {
+      final dto = await _authRepository.updateProfile(
+        userId: userId,
+        firstName: firstName,
+        lastName: lastName,
+        phone: phone.trim(),
+        schoolId: schoolId,
+      );
+      _loginState = AsyncData(User.fromDto(dto));
+      notifyListeners();
+      return true;
+    } catch (e, s) {
+      _loginState = AsyncError(e, s);
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<void> logout() async {
     await _authRepository.logout();
     _loginState = const AsyncLoading();

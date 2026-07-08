@@ -10,5 +10,19 @@ abstract class AuthRepository {
 
   Future<AuthTokenDto> refreshToken(String refreshToken);
   Future<UserProfileDto> getProfile();
+
+  /// Updates the signed-in user's own profile and returns the fresh record.
+  /// Only non-null fields are sent, so callers can patch a subset.
+  Future<UserProfileDto> updateProfile({
+    required String userId,
+    String? firstName,
+    String? lastName,
+    String? phone,
+    String? schoolId,
+  });
+
+  /// Lists the schools a user can pick from during onboarding.
+  Future<List<SchoolDto>> getSchools();
+
   Future<void> logout();
 }
