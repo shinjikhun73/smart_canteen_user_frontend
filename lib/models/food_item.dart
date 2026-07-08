@@ -1,5 +1,6 @@
-// Legacy model used by existing screens.
-// New features should use lib/model/meal/meal_item.dart (MealItem).
+// Menu item model used by the menu/home screens and the cart. Populated from
+// the backend at runtime via MenuState; the const kMenuItems below is only a
+// fallback/reference sample.
 import 'package:flutter/material.dart';
 
 class FoodItem {

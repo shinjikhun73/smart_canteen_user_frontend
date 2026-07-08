@@ -1,43 +1,46 @@
+/// Mirrors a backend `MenuItem` (`GET /menu-items`). Prices arrive as decimal
+/// strings; the backend has no ratings/tags/images, so the app supplies those
+/// visually (gradient + icon placeholders).
 class MenuItemDto {
   final String id;
   final String name;
   final String description;
   final double price;
-  final double rating;
-  final List<String> tags;
-  final String session; // 'breakfast' | 'lunch' | 'drinks'
-  final String? imageUrl;
+
+  /// Category name (e.g. "Breakfast", "Lunch", "Drinks"), or null if uncategorised.
+  final String? categoryName;
+  final String availabilityStatus;
+
+  /// The school this item belongs to — the tenant an order for it is scoped to.
+  final String? schoolId;
 
   const MenuItemDto({
     required this.id,
     required this.name,
     required this.description,
     required this.price,
-    required this.rating,
-    required this.tags,
-    required this.session,
-    this.imageUrl,
+    required this.categoryName,
+    required this.availabilityStatus,
+    required this.schoolId,
   });
 
-  factory MenuItemDto.fromJson(Map<String, dynamic> json) => MenuItemDto(
-        id: json['id'] as String,
-        name: json['name'] as String,
-        description: json['description'] as String,
-        price: (json['price'] as num).toDouble(),
-        rating: (json['rating'] as num).toDouble(),
-        tags: List<String>.from(json['tags'] as List),
-        session: json['session'] as String,
-        imageUrl: json['image_url'] as String?,
-      );
+  factory MenuItemDto.fromJson(Map<String, dynamic> json) {
+    final category = json['category'];
+    return MenuItemDto(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      description: (json['description'] as String?) ?? '',
+      price: _toDouble(json['price']),
+      categoryName:
+          category is Map<String, dynamic> ? category['name'] as String? : null,
+      availabilityStatus: json['availability_status'] as String? ?? 'available',
+      schoolId: json['school_id'] as String?,
+    );
+  }
 
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'description': description,
-        'price': price,
-        'rating': rating,
-        'tags': tags,
-        'session': session,
-        'image_url': imageUrl,
+  static double _toDouble(dynamic value) => switch (value) {
+        num n => n.toDouble(),
+        String s => double.tryParse(s) ?? 0.0,
+        _ => 0.0,
       };
 }

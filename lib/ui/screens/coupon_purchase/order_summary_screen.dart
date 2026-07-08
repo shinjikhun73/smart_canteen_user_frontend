@@ -1,92 +1,150 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../data/dtos/order_dto.dart';
+import '../../../data/exceptions/api_exception.dart';
+import '../../../data/repositories/order/order_repository.dart';
 import '../../../models/cart_model.dart';
 import '../../../models/food_item.dart';
 import '../../../theme/app_theme.dart';
 import '../../../ui/states/balance_state.dart';
+import '../../../ui/states/meal_coupons_state.dart';
+import '../../../ui/states/menu_state.dart';
 import '../../../ui/states/order_history_state.dart';
+import '../../../ui/utils/async_value.dart';
+import '../digital_wallet/qr_screen.dart';
 import '../../widgets/payment_method_sheet.dart';
 import '../../widgets/payment_success_dialog.dart';
 import '../../widgets/smart_canteen_widgets.dart';
 
-class OrderSummaryScreen extends StatelessWidget {
+class OrderSummaryScreen extends StatefulWidget {
   const OrderSummaryScreen({super.key});
 
   static const routeName = '/order-summary';
 
-  void _showPaymentMethodSheet(BuildContext context, double amount) {
-    final balanceState = context.read<BalanceState>();
+  @override
+  State<OrderSummaryScreen> createState() => _OrderSummaryScreenState();
+}
 
+class _OrderSummaryScreenState extends State<OrderSummaryScreen> {
+  // The meal session this order is for; the backend requires one of these.
+  String _session = _inferSessionKey();
+  bool _placing = false;
+
+  void _showPaymentMethodSheet(double amount) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => PaymentMethodSheet(
         totalAmount: amount,
-        onConfirm: (paymentMethod) async {
-          try {
-            if (paymentMethod == 'SC') {
-              await balanceState.payment(amount);
-            }
-            if (context.mounted) {
-              _showPaymentSuccess(context, amount);
-            }
-          } catch (e) {
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Payment failed: $e'),
-                  behavior: SnackBarBehavior.floating,
-                  backgroundColor: const Color(0xFFE53935),
-                  duration: const Duration(seconds: 3),
-                ),
-              );
-            }
-          }
-        },
+        onConfirm: (paymentMethod) => _checkout(paymentMethod),
       ),
     );
   }
 
-  void _showPaymentSuccess(BuildContext context, double amount) {
-    PaymentSuccessDialog.show(
-      context,
-      amount: amount,
-      buttonLabel: 'Back to Home',
-      // Runs once — whether the user taps the button or it auto-dismisses.
-      onDismiss: () => _completeOrder(context),
-    );
+  /// Places the order, charges the wallet its authoritative total, stores the
+  /// minted coupons, and routes to the QR screen. Order and payment are two
+  /// backend calls, so we pre-check the balance to avoid placing an order we
+  /// can't pay for.
+  Future<void> _checkout(String paymentMethod) async {
+    if (_placing) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    void fail(String msg) => messenger.showSnackBar(
+          SnackBar(
+            content: Text(msg),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: const Color(0xFFE53935),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+
+    if (paymentMethod != 'SC') {
+      fail('Only the Smart Canteen wallet is supported right now.');
+      return;
+    }
+
+    final cart = CartProvider.of(context);
+    final orderRepo = context.read<OrderRepository>();
+    final balance = context.read<BalanceState>();
+    final mealCoupons = context.read<MealCouponsState>();
+    final schoolId = context.read<MenuState>().schoolId;
+
+    if (schoolId == null) {
+      fail('Menu is still loading — please try again in a moment.');
+      return;
+    }
+
+    final balanceState = balance.balanceUsd;
+    final available =
+        balanceState is AsyncData<double> ? balanceState.data : 0.0;
+    if (available + 0.001 < cart.total) {
+      fail('Insufficient wallet balance. Please top up first.');
+      return;
+    }
+
+    final items = cart.entries
+        .map((e) => OrderItemInput(menuItemId: e.item.id, quantity: e.quantity))
+        .toList();
+
+    setState(() => _placing = true);
+    try {
+      final order = await orderRepo.placeOrder(
+        schoolId: schoolId,
+        mealSession: _session,
+        items: items,
+      );
+      // Charge the wallet the backend's authoritative total.
+      await balance.payment(order.totalAmount);
+      mealCoupons.addFromOrder(order.coupons);
+      _recordLocalHistory(cart, order);
+      cart.clear();
+      if (!mounted) return;
+      _showPaymentSuccess(order.totalAmount);
+    } catch (e) {
+      if (!mounted) return;
+      final msg = e is ApiException ? e.message : 'Something went wrong.';
+      fail('Checkout failed: $msg');
+    } finally {
+      if (mounted) setState(() => _placing = false);
+    }
   }
 
-  void _completeOrder(BuildContext context) {
-    final cart = CartProvider.of(context);
+  void _recordLocalHistory(CartModel cart, PlacedOrderDto order) {
     final itemsLabel = cart.entries
         .map(
           (e) => e.quantity > 1 ? '${e.item.name} ×${e.quantity}' : e.item.name,
         )
         .join(', ');
     final firstEntry = cart.entries.isNotEmpty ? cart.entries.first : null;
-    final orderId = DateTime.now().millisecondsSinceEpoch.toString();
-    final historyState = context.read<OrderHistoryState>();
-    historyState.addOrder(
-      OrderRecord(
-        id: orderId,
-        date: _formatNow(),
-        items: itemsLabel,
-        total: cart.total,
-        status: 'Pending',
-        session: _inferSession(),
-        imagePath: firstEntry?.item.imagePath,
-        colorSeed: firstEntry?.item.colorSeed ?? 0,
-      ),
+    context.read<OrderHistoryState>().addOrder(
+          OrderRecord(
+            id: order.id,
+            date: _formatNow(),
+            items: itemsLabel,
+            total: order.totalAmount,
+            status: 'Pending',
+            session: _sessionLabel(_session),
+            imagePath: firstEntry?.item.imagePath,
+            colorSeed: firstEntry?.item.colorSeed ?? 0,
+          ),
+        );
+  }
+
+  void _showPaymentSuccess(double amount) {
+    PaymentSuccessDialog.show(
+      context,
+      amount: amount,
+      buttonLabel: 'View my QR',
+      // Runs once — whether the user taps the button or it auto-dismisses.
+      onDismiss: () {
+        if (mounted) {
+          Navigator.pushNamedAndRemoveUntil(
+              context, QrScreen.routeName, (_) => false);
+        }
+      },
     );
-    // Auto-complete after a delay to simulate canteen processing.
-    Future.delayed(const Duration(seconds: 7), () {
-      historyState.updateOrderStatus(orderId, 'Completed');
-    });
-    cart.clear();
-    Navigator.pushNamedAndRemoveUntil(context, '/home', (_) => false);
   }
 
   @override
@@ -195,7 +253,10 @@ class OrderSummaryScreen extends StatelessWidget {
                 ),
                 _PaymentSummarySection(
                   cart: cart,
-                  onPay: () => _showPaymentMethodSheet(context, cart.total),
+                  session: _session,
+                  onSessionChanged: (s) => setState(() => _session = s),
+                  isPlacing: _placing,
+                  onPay: () => _showPaymentMethodSheet(cart.total),
                 ),
               ],
             ),
@@ -395,9 +456,18 @@ class QuantityController extends StatelessWidget {
 }
 
 class _PaymentSummarySection extends StatelessWidget {
-  const _PaymentSummarySection({required this.cart, required this.onPay});
+  const _PaymentSummarySection({
+    required this.cart,
+    required this.session,
+    required this.onSessionChanged,
+    required this.isPlacing,
+    required this.onPay,
+  });
 
   final CartModel cart;
+  final String session;
+  final ValueChanged<String> onSessionChanged;
+  final bool isPlacing;
   final VoidCallback onPay;
 
   @override
@@ -416,22 +486,36 @@ class _PaymentSummarySection extends StatelessWidget {
         ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const Text(
+            'Meal Session',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.mutedText,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              for (final s in const ['breakfast', 'lunch', 'dinner'])
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(right: s == 'dinner' ? 0 : 8),
+                    child: _SessionChoiceChip(
+                      label: _sessionLabel(s),
+                      selected: session == s,
+                      onTap: () => onSessionChanged(s),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
           _SummaryRow(
             label: 'Subtotal',
             value: '\$${cart.subtotal.toStringAsFixed(2)}',
-          ),
-          const SizedBox(height: 10),
-          if (cart.discount > 0)
-            _SummaryRow(
-              label: 'Scholar Discount',
-              value: '- \$${cart.discount.toStringAsFixed(2)}',
-              valueColor: Colors.redAccent,
-            ),
-          if (cart.discount > 0) const SizedBox(height: 10),
-          _SummaryRow(
-            label: 'Service Fee',
-            value: '\$${cart.serviceFee.toStringAsFixed(2)}',
           ),
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 16),
@@ -444,8 +528,8 @@ class _PaymentSummarySection extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           SmartCanteenButton(
-            label: 'Proceed to Payment  →',
-            onPressed: onPay,
+            label: isPlacing ? 'Placing order…' : 'Proceed to Payment  →',
+            onPressed: isPlacing ? null : onPay,
             height: 56,
             radius: 16,
           ),
@@ -455,17 +539,54 @@ class _PaymentSummarySection extends StatelessWidget {
   }
 }
 
+class _SessionChoiceChip extends StatelessWidget {
+  const _SessionChoiceChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? AppTheme.green : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? AppTheme.green : AppTheme.border,
+            width: 1.5,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: selected ? Colors.white : AppTheme.mutedText,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _SummaryRow extends StatelessWidget {
   const _SummaryRow({
     required this.label,
     required this.value,
-    this.valueColor,
     this.isTotal = false,
   });
 
   final String label;
   final String value;
-  final Color? valueColor;
   final bool isTotal;
 
   @override
@@ -486,7 +607,7 @@ class _SummaryRow extends StatelessWidget {
           style: TextStyle(
             fontSize: isTotal ? 22 : 14,
             fontWeight: isTotal ? FontWeight.w700 : FontWeight.w600,
-            color: valueColor ?? (isTotal ? AppTheme.green : AppTheme.text),
+            color: isTotal ? AppTheme.green : AppTheme.text,
           ),
         ),
       ],
@@ -503,11 +624,18 @@ String _formatNow() {
   return 'Today, $h:$m $period';
 }
 
-// Infers the meal session from the current time.
-// Outside defined windows, falls back to the nearest upcoming session.
-String _inferSession() {
-  final minutes = DateTime.now().hour * 60 + DateTime.now().minute;
-  if (minutes >= 7 * 60 && minutes < 9 * 60) return 'Breakfast';
-  if (minutes >= 11 * 60 && minutes < 13 * 60) return 'Lunch';
-  return minutes < 10 * 60 ? 'Breakfast' : 'Lunch';
+// Default meal-session key ('breakfast'|'lunch'|'dinner') from the current time.
+String _inferSessionKey() {
+  final hour = DateTime.now().hour;
+  if (hour < 10) return 'breakfast';
+  if (hour < 15) return 'lunch';
+  return 'dinner';
 }
+
+// Display label for a session key.
+String _sessionLabel(String key) => switch (key) {
+      'breakfast' => 'Breakfast',
+      'lunch' => 'Lunch',
+      'dinner' => 'Dinner',
+      _ => key,
+    };

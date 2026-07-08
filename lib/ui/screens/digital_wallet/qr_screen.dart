@@ -3,8 +3,11 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
+import '../../../data/dtos/order_dto.dart';
 import '../../../theme/app_theme.dart';
+import '../../../ui/states/meal_coupons_state.dart';
 import '../../../ui/states/order_history_state.dart';
 import '../../widgets/smart_canteen_widgets.dart';
 
@@ -28,7 +31,8 @@ class QrScreen extends StatefulWidget {
 
 class _QrScreenState extends State<QrScreen>
     with TickerProviderStateMixin {
-  String _session = 'Breakfast';
+  String _session = 'breakfast';
+  int _couponIndex = 0;
 
   late final AnimationController _pulseCtrl;
   late final Animation<double> _pulseAnim;
@@ -68,7 +72,10 @@ class _QrScreenState extends State<QrScreen>
       CurvedAnimation(parent: _entranceCtrl, curve: Curves.easeOutCubic),
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _entranceCtrl.forward();
+      if (mounted) {
+        _entranceCtrl.forward();
+        context.read<MealCouponsState>().fetchActive();
+      }
     });
   }
 
@@ -84,6 +91,7 @@ class _QrScreenState extends State<QrScreen>
     HapticFeedback.mediumImpact();
     _pulseCtrl.forward(from: 0);
     _spinCtrl.forward(from: 0);
+    context.read<MealCouponsState>().fetchActive();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Text('QR code refreshed'),
@@ -108,7 +116,16 @@ class _QrScreenState extends State<QrScreen>
   Widget build(BuildContext context) {
     final orders = context.watch<OrderHistoryState>().orders;
     final latest = orders.isNotEmpty ? orders.first : null;
-    final isPaid = latest?.status == 'Completed';
+
+    // Active coupons for the selected meal session; each is a scannable QR.
+    final sessionCoupons = context.watch<MealCouponsState>().forSession(_session);
+    final index = sessionCoupons.isEmpty
+        ? 0
+        : _couponIndex.clamp(0, sessionCoupons.length - 1);
+    final CouponDto? coupon =
+        sessionCoupons.isNotEmpty ? sessionCoupons[index] : null;
+    // "Paid/active" = there's a live coupon to show for this session.
+    final isPaid = coupon != null;
 
     return Scaffold(
       backgroundColor: context.bgColor,
@@ -145,17 +162,34 @@ class _QrScreenState extends State<QrScreen>
               child: SlideTransition(
                 position: _entranceSlide,
                 child: _TicketCard(
-                  session: _session,
+                  sessionLabel: _sessionLabel(_session),
                   isPaid: isPaid,
                   pulseAnim: _pulseAnim,
+                  qrData: coupon?.qrToken,
+                  subtitle: coupon != null
+                      ? '${coupon.menuItemName ?? 'Meal ticket'}'
+                          '${coupon.couponCode != null ? '  ·  ${coupon.couponCode}' : ''}'
+                      : 'No active ticket for this session',
                 ),
               ),
             ),
+            // ── Ticket pager (when a session has more than one) ──────────────
+            if (sessionCoupons.length > 1) ...[
+              const SizedBox(height: 12),
+              _CouponPager(
+                count: sessionCoupons.length,
+                index: index,
+                onChanged: (i) => setState(() => _couponIndex = i),
+              ),
+            ],
             const SizedBox(height: 20),
             // ── Session selector ─────────────────────────────────────────────
             _SessionSelector(
               selected: _session,
-              onSelect: (s) => setState(() => _session = s),
+              onSelect: (s) => setState(() {
+                _session = s;
+                _couponIndex = 0;
+              }),
             ),
             const SizedBox(height: 20),
             // ── Order summary ────────────────────────────────────────────────
@@ -203,6 +237,51 @@ String _fmtDate(DateTime dt) {
   ];
   const d = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   return '${d[dt.weekday - 1]}, ${m[dt.month - 1]} ${dt.day}, ${dt.year}';
+}
+
+String _sessionLabel(String key) => switch (key) {
+      'breakfast' => 'Breakfast',
+      'lunch' => 'Lunch',
+      'dinner' => 'Dinner',
+      _ => key,
+    };
+
+/// Dot pager to switch between multiple tickets in the same session.
+class _CouponPager extends StatelessWidget {
+  const _CouponPager({
+    required this.count,
+    required this.index,
+    required this.onChanged,
+  });
+
+  final int count;
+  final int index;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        IconButton(
+          icon: const Icon(Icons.chevron_left_rounded, color: _kGreen),
+          onPressed: index > 0 ? () => onChanged(index - 1) : null,
+        ),
+        Text(
+          'Ticket ${index + 1} of $count',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: context.textColor,
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.chevron_right_rounded, color: _kGreen),
+          onPressed: index < count - 1 ? () => onChanged(index + 1) : null,
+        ),
+      ],
+    );
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -286,14 +365,21 @@ class _OutlinedReceiptButtonState extends State<_OutlinedReceiptButton> {
 
 class _TicketCard extends StatelessWidget {
   const _TicketCard({
-    required this.session,
+    required this.sessionLabel,
     required this.isPaid,
     required this.pulseAnim,
+    required this.qrData,
+    required this.subtitle,
   });
 
-  final String session;
+  final String sessionLabel;
   final bool isPaid;
   final Animation<double> pulseAnim;
+
+  /// The coupon's `qr_token` — encoded verbatim so the canteen scanner can
+  /// redeem it. Null when there's no active ticket for this session.
+  final String? qrData;
+  final String subtitle;
 
   @override
   Widget build(BuildContext context) {
@@ -353,7 +439,9 @@ class _TicketCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'ID: 20230042  ·  CADT Scholar',
+                        subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.6),
                           fontSize: 11,
@@ -379,15 +467,17 @@ class _TicketCard extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        session == 'Breakfast'
+                        sessionLabel == 'Breakfast'
                             ? Icons.wb_sunny_outlined
-                            : Icons.lunch_dining_outlined,
+                            : sessionLabel == 'Dinner'
+                                ? Icons.nightlight_outlined
+                                : Icons.lunch_dining_outlined,
                         color: _kMint,
                         size: 12,
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        session,
+                        sessionLabel,
                         style: const TextStyle(
                           color: _kMint,
                           fontSize: 11,
@@ -440,7 +530,22 @@ class _TicketCard extends StatelessWidget {
                           ],
                         ),
                         padding: const EdgeInsets.all(14),
-                        child: const _QrPlaceholder(),
+                        child: qrData != null
+                            ? QrImageView(
+                                data: qrData!,
+                                version: QrVersions.auto,
+                                gapless: false,
+                                // Solid black on white — maximum scan contrast.
+                                eyeStyle: const QrEyeStyle(
+                                  eyeShape: QrEyeShape.square,
+                                  color: Colors.black,
+                                ),
+                                dataModuleStyle: const QrDataModuleStyle(
+                                  dataModuleShape: QrDataModuleShape.square,
+                                  color: Colors.black,
+                                ),
+                              )
+                            : const _QrPlaceholder(),
                       ),
                     ),
                     // Status badge anchored to QR top-right
@@ -728,17 +833,25 @@ class _SessionSelector extends StatelessWidget {
         _SessionChip(
           icon: Icons.wb_sunny_outlined,
           label: 'Breakfast',
-          time: '7:00 – 9:00 AM',
-          isSelected: selected == 'Breakfast',
-          onTap: () => onSelect('Breakfast'),
+          time: '7 – 9 AM',
+          isSelected: selected == 'breakfast',
+          onTap: () => onSelect('breakfast'),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 10),
         _SessionChip(
           icon: Icons.lunch_dining_outlined,
           label: 'Lunch',
-          time: '11:00 AM – 1:00 PM',
-          isSelected: selected == 'Lunch',
-          onTap: () => onSelect('Lunch'),
+          time: '11 AM – 1 PM',
+          isSelected: selected == 'lunch',
+          onTap: () => onSelect('lunch'),
+        ),
+        const SizedBox(width: 10),
+        _SessionChip(
+          icon: Icons.nightlight_outlined,
+          label: 'Dinner',
+          time: '5 – 7 PM',
+          isSelected: selected == 'dinner',
+          onTap: () => onSelect('dinner'),
         ),
       ],
     );

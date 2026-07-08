@@ -49,18 +49,33 @@ class ApiConfig {
   static const String schools = '/schools';
 
   // Menu
-  static const String weeklyMenu = '/menu/weekly';
-  static const String menuBySession = '/menu/session';
+  /// `GET /menu-items` — menu items, filterable by `school_id`,
+  /// `availability_status`, paginated (`limit` max 100).
+  static const String menuItems = '/menu-items';
 
-  // Coupon / orders
-  static const String couponPlans = '/coupons/plans';
-  static const String purchaseCoupon = '/coupons/purchase';
-  static const String orderHistory = '/coupons/history';
+  // Orders
+  /// `POST /orders` — place an order (auto-mints a QR coupon per item);
+  /// `GET /orders/my` — the signed-in user's orders.
+  static const String orders = '/orders';
+  static const String ordersMy = '/orders/my';
+
+  // Coupons
+  /// `GET /coupons?user_id=&status=` — the user's meal-ticket coupons.
+  static const String coupons = '/coupons';
 
   // Wallet
-  static const String walletBalance = '/wallet/balance';
-  static const String topUp = '/wallet/topup';
-  static const String transactions = '/wallet/transactions';
+  /// `GET /wallet/my` — all wallets for the signed-in user (one per school).
+  static const String walletMy = '/wallet/my';
+
+  /// `POST /wallet/:id/top-up` — add funds to a wallet.
+  static String walletTopUp(String walletId) => '/wallet/$walletId/top-up';
+
+  /// `POST /wallet/:id/pay` — deduct a payment from a wallet.
+  static String walletPay(String walletId) => '/wallet/$walletId/pay';
+
+  /// `GET /wallet/:id/transactions` — transaction history for a wallet.
+  static String walletTransactions(String walletId) =>
+      '/wallet/$walletId/transactions';
 
   // Notifications
   static const String notifications = '/notifications';

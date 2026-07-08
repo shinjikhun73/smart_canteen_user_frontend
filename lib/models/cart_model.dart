@@ -19,11 +19,13 @@ class CartModel extends ChangeNotifier {
   double get subtotal =>
       _entries.fold(0.0, (s, e) => s + e.item.price * e.quantity);
 
-  double get discount => subtotal >= 3.0 ? 1.00 : 0.0;
+  // No client-side discount/fee: the backend charges exactly Σ price×qty, so the
+  // cart total must equal the subtotal (kept as getters for existing UI rows).
+  double get discount => 0.0;
 
-  double get serviceFee => _entries.isEmpty ? 0.0 : 0.50;
+  double get serviceFee => 0.0;
 
-  double get total => subtotal - discount + serviceFee;
+  double get total => subtotal;
 
   void add(FoodItem item) {
     final idx = _entries.indexWhere((e) => e.item.id == item.id);

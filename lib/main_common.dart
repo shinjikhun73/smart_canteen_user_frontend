@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'data/repositories/auth/auth_repository.dart';
 import 'data/repositories/coupon/coupon_repository.dart';
 import 'data/repositories/menu/menu_repository.dart';
+import 'data/repositories/order/order_repository.dart';
 import 'data/repositories/wallet/wallet_repository.dart';
 import 'models/cart_model.dart';
 import 'theme/app_theme.dart';
@@ -19,7 +20,6 @@ import 'ui/screens/login/sign_in_screen.dart';
 import 'ui/screens/login/sign_up_screen.dart';
 import 'ui/screens/login/view_model/auth_view_model.dart';
 import 'ui/screens/menu_browsing/menu_screen.dart';
-import 'ui/screens/menu_browsing/view_model/menu_view_model.dart';
 import 'ui/screens/settings/settings_screen.dart';
 import 'ui/screens/settings/about_screen.dart';
 import 'ui/screens/settings/edit_profile_screen.dart';
@@ -29,6 +29,8 @@ import 'ui/screens/splash/splash_screen.dart';
 import 'ui/states/active_coupon_state.dart';
 import 'ui/states/app_settings_state.dart';
 import 'ui/states/balance_state.dart';
+import 'ui/states/meal_coupons_state.dart';
+import 'ui/states/menu_state.dart';
 import 'ui/states/notification_prefs_state.dart';
 import 'ui/states/order_history_state.dart';
 import 'ui/states/payment_methods_state.dart';
@@ -41,12 +43,14 @@ class SmartCanteenApp extends StatefulWidget {
     required this.menuRepository,
     required this.couponRepository,
     required this.walletRepository,
+    required this.orderRepository,
   });
 
   final AuthRepository authRepository;
   final MenuRepository menuRepository;
   final CouponRepository couponRepository;
   final WalletRepository walletRepository;
+  final OrderRepository orderRepository;
 
   @override
   State<SmartCanteenApp> createState() => _SmartCanteenAppState();
@@ -70,9 +74,12 @@ class _SmartCanteenAppState extends State<SmartCanteenApp> {
         Provider<MenuRepository>.value(value: widget.menuRepository),
         Provider<CouponRepository>.value(value: widget.couponRepository),
         Provider<WalletRepository>.value(value: widget.walletRepository),
+        Provider<OrderRepository>.value(value: widget.orderRepository),
 
         // Global states
         ChangeNotifierProvider.value(value: _cart),
+        ChangeNotifierProvider(
+            create: (_) => MealCouponsState(widget.orderRepository)),
         ChangeNotifierProvider(create: (_) => AppSettingsState()),
         ChangeNotifierProvider(create: (_) => UserProfileState()),
         ChangeNotifierProvider(create: (_) => PaymentMethodsState()),
@@ -87,7 +94,7 @@ class _SmartCanteenAppState extends State<SmartCanteenApp> {
         ChangeNotifierProvider(
             create: (_) => AuthViewModel(widget.authRepository)),
         ChangeNotifierProvider(
-            create: (_) => MenuViewModel(widget.menuRepository)),
+            create: (_) => MenuState(widget.menuRepository)),
         ChangeNotifierProvider(
             create: (_) => PurchaseViewModel(widget.couponRepository)),
         ChangeNotifierProvider(

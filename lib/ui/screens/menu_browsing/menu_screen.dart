@@ -5,11 +5,9 @@ import 'package:provider/provider.dart';
 import '../../../models/cart_model.dart';
 import '../../../models/food_item.dart';
 import '../../../theme/app_theme.dart';
-import '../../../ui/states/balance_state.dart';
-import '../../../ui/states/order_history_state.dart';
+import '../../../ui/states/menu_state.dart';
+import '../../../ui/utils/async_value.dart';
 import '../../widgets/cart_bar.dart';
-import '../../widgets/payment_method_sheet.dart';
-import '../../widgets/payment_success_dialog.dart';
 
 enum _SortBy { recommended, priceLowHigh, priceHighLow, rating }
 
@@ -33,14 +31,22 @@ class _MenuScreenState extends State<MenuScreen> {
   static const _cats = ['', 'breakfast', 'lunch', 'drinks'];
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<MenuState>().load();
+    });
+  }
+
+  @override
   void dispose() {
     _scrollController.dispose();
     super.dispose();
   }
 
-  List<FoodItem> get _visibleItems {
+  List<FoodItem> _visibleItems(List<FoodItem> all) {
     final cat = _cats[_selectedFilter];
-    final list = kMenuItems.where((f) {
+    final list = all.where((f) {
       final matchCat = cat.isEmpty || f.category == cat;
       final matchSearch =
           _search.isEmpty ||
@@ -59,6 +65,75 @@ class _MenuScreenState extends State<MenuScreen> {
         break;
     }
     return list;
+  }
+
+  Widget _buildItemsBody(BuildContext context, List<FoodItem> items) {
+    if (items.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: AppTheme.green.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.search_off_rounded,
+                size: 36,
+                color: AppTheme.green,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No items found',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: context.textColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Try adjusting your filters or search',
+              style: TextStyle(
+                fontSize: 13,
+                color: context.mutedColor,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      controller: _scrollController,
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
+      itemCount: items.length,
+      itemBuilder: (context, index) {
+        final item = items[index];
+        final isExpanded = _expandedItemId == item.id;
+        return _FadeInItem(
+          // Re-key per filter+item so the fade replays on switch.
+          key: ValueKey('${_selectedFilter}_${item.id}'),
+          index: index,
+          child: Consumer<CartModel>(
+            builder: (context, _, _) {
+              return FoodItemCard(
+                item: item,
+                isExpanded: isExpanded,
+                onTap: () => setState(() {
+                  _expandedItemId = isExpanded ? null : item.id;
+                }),
+              );
+            },
+          ),
+        );
+      },
+    );
   }
 
   void _onFilterChanged(int i) {
@@ -86,79 +161,10 @@ class _MenuScreenState extends State<MenuScreen> {
     );
   }
 
-  void _showCheckoutSheet(BuildContext context) {
-    final cart = CartProvider.of(context);
-    final balanceState = context.read<BalanceState>();
-    final orderHistory = context.read<OrderHistoryState>();
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => PaymentMethodSheet(
-        totalAmount: cart.total,
-        onConfirm: (paymentMethod) async {
-          try {
-            if (paymentMethod == 'SC') {
-              await balanceState.payment(cart.total);
-            }
-
-            final items = cart.entries.map((e) => e.item.name).join(', ');
-            final orderId = DateTime.now().millisecondsSinceEpoch.toString();
-            final order = OrderRecord(
-              id: orderId,
-              date: _formatDate(DateTime.now()),
-              items: items,
-              total: cart.total,
-              status: 'Pending',
-              session: 'Lunch',
-              imagePath: cart.entries.isNotEmpty ? cart.entries.first.item.imagePath : null,
-              colorSeed: cart.entries.isNotEmpty ? cart.entries.first.item.colorSeed : 0,
-            );
-
-            orderHistory.addOrder(order);
-            cart.clear();
-
-            Future.delayed(const Duration(seconds: 7), () {
-              orderHistory.updateOrderStatus(orderId, 'Completed');
-            });
-
-            // Confirm with the processing → success modal (order already saved).
-            if (context.mounted) {
-              PaymentSuccessDialog.show(
-                context,
-                amount: order.total,
-                onDismiss: () {},
-              );
-            }
-          } catch (e) {
-            scaffoldMessenger.showSnackBar(
-              SnackBar(
-                content: Text('Payment failed: $e'),
-                behavior: SnackBarBehavior.floating,
-                backgroundColor: const Color(0xFFE53935),
-                duration: const Duration(seconds: 3),
-              ),
-            );
-          }
-        },
-      ),
-    );
-  }
-
-  String _formatDate(DateTime dt) {
-    final now = DateTime.now();
-    if (dt.day == now.day && dt.month == now.month && dt.year == now.year) {
-      return 'Today, ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')} ${dt.hour >= 12 ? 'PM' : 'AM'}';
-    }
-    return '${dt.month}/${dt.day}, ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-  }
-
   @override
   Widget build(BuildContext context) {
     final cart = CartProvider.of(context);
-    final items = _visibleItems;
+    final menuAsync = context.watch<MenuState>().items;
 
     return Scaffold(
       appBar: AppBar(
@@ -279,71 +285,17 @@ class _MenuScreenState extends State<MenuScreen> {
               ),
               const SizedBox(height: 16),
               Expanded(
-                child: items.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 72,
-                              height: 72,
-                              decoration: BoxDecoration(
-                                color: AppTheme.green.withValues(alpha: 0.1),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.search_off_rounded,
-                                size: 36,
-                                color: AppTheme.green,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No items found',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: context.textColor,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Try adjusting your filters or search',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: context.mutedColor,
-                                fontWeight: FontWeight.w400,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : ListView.builder(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
-                        itemCount: items.length,
-                        itemBuilder: (context, index) {
-                          final item = items[index];
-                          final isExpanded = _expandedItemId == item.id;
-                          return _FadeInItem(
-                            // Re-key per filter+item so the fade replays on switch.
-                            key: ValueKey('${_selectedFilter}_${item.id}'),
-                            index: index,
-                            child: Consumer<CartModel>(
-                              builder: (context, _, _) {
-                                return FoodItemCard(
-                                  item: item,
-                                  isExpanded: isExpanded,
-                                  onTap: () => setState(() {
-                                    _expandedItemId =
-                                        isExpanded ? null : item.id;
-                                  }),
-                                );
-                              },
-                            ),
-                          );
-                        },
-                      ),
+                child: switch (menuAsync) {
+                  AsyncLoading<List<FoodItem>>() => const Center(
+                      child: CircularProgressIndicator(color: AppTheme.green),
+                    ),
+                  AsyncError<List<FoodItem>>() => _MenuLoadError(
+                      onRetry: () =>
+                          context.read<MenuState>().load(force: true),
+                    ),
+                  AsyncData<List<FoodItem>>(:final data) =>
+                    _buildItemsBody(context, _visibleItems(data)),
+                },
               ),
             ],
           ),
@@ -353,7 +305,9 @@ class _MenuScreenState extends State<MenuScreen> {
             right: 0,
             child: CartBar(
               onViewCart: () => Navigator.pushNamed(context, '/order-summary'),
-              onCheckout: () => _showCheckoutSheet(context),
+              // Checkout happens on the order-summary screen (pick session,
+              // place the real order, pay, then get the QR coupon).
+              onCheckout: () => Navigator.pushNamed(context, '/order-summary'),
             ),
           ),
         ],
@@ -1845,6 +1799,36 @@ class _BounceAddButtonState extends State<_BounceAddButton>
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Shown when the menu fails to load from the backend.
+class _MenuLoadError extends StatelessWidget {
+  const _MenuLoadError({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.cloud_off_rounded, size: 40, color: AppTheme.green),
+          const SizedBox(height: 12),
+          Text(
+            "Couldn't load the menu",
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: context.textColor,
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextButton(onPressed: onRetry, child: const Text('Retry')),
+        ],
       ),
     );
   }

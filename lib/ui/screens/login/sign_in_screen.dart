@@ -645,7 +645,7 @@ class _SocialRow extends StatelessWidget {
         SmartCanteenSocialButton(
           label: 'Google',
           brandColor: _googleBlue,
-          icon: _socialIcon('asset/auth_logo/search.png'),
+          icon: _socialIcon('asset/auth_logo/google.png'),
           onTap: isBusy ? null : onGoogleTap,
         ),
         const SizedBox(width: 14),
@@ -738,5 +738,8 @@ Widget _socialIcon(String assetPath) {
     width: 22,
     height: 22,
     fit: BoxFit.contain,
+    // A missing asset must never blow up the layout — fall back to a plain icon.
+    errorBuilder: (_, _, _) =>
+        const Icon(Icons.login, size: 20, color: AppTheme.mutedText),
   );
 }

@@ -8,12 +8,12 @@ import '../../../models/cart_model.dart';
 import '../../../models/food_item.dart';
 import '../../../theme/app_theme.dart';
 import '../../../ui/states/balance_state.dart';
+import '../../../ui/states/menu_state.dart';
 import '../../../ui/states/order_history_state.dart';
 import '../../../ui/states/user_profile_state.dart';
 import '../../../ui/utils/async_value.dart';
 import '../../../ui/utils/currency_formatter.dart';
 import '../../widgets/cart_bar.dart';
-import '../../widgets/payment_method_sheet.dart';
 import '../../widgets/payment_success_dialog.dart';
 import '../../widgets/smart_canteen_widgets.dart';
 import '../shell/app_shell.dart';
@@ -34,18 +34,20 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.read<BalanceState>().fetchBalance();
+      if (mounted) {
+        context.read<BalanceState>().fetchBalance();
+        context.read<MenuState>().load();
+      }
     });
   }
 
   static const _filterLabels = ['All', 'Breakfast', 'Lunch', 'Drinks'];
   static const _filterCats = ['', 'breakfast', 'lunch', 'drinks'];
 
-  List<FoodItem> get _filteredItems {
+  List<FoodItem> _filteredItems(List<FoodItem> all) {
     final cat = _filterCats[_selectedFilter];
-    final items = cat.isEmpty
-        ? kMenuItems
-        : kMenuItems.where((f) => f.category == cat).toList();
+    final items =
+        cat.isEmpty ? all : all.where((f) => f.category == cat).toList();
     return items.take(4).toList();
   }
 
@@ -64,80 +66,6 @@ class _HomeScreenState extends State<HomeScreen> {
     if (h < 12) return 'Good morning,';
     if (h < 17) return 'Good afternoon,';
     return 'Good evening,';
-  }
-
-  void _showCheckoutSheet(BuildContext context) {
-    HapticFeedback.mediumImpact();
-    final cart = CartProvider.of(context);
-    final balanceState = context.read<BalanceState>();
-    final orderHistory = context.read<OrderHistoryState>();
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => PaymentMethodSheet(
-        totalAmount: cart.total,
-        onConfirm: (paymentMethod) async {
-          try {
-            if (paymentMethod == 'SC') {
-              await balanceState.payment(cart.total);
-            }
-
-            final items = cart.entries.map((e) => e.item.name).join(', ');
-            final orderId = DateTime.now().millisecondsSinceEpoch.toString();
-            final order = OrderRecord(
-              id: orderId,
-              date: _formatDate(DateTime.now()),
-              items: items,
-              total: cart.total,
-              status: 'Pending',
-              session: 'Lunch',
-              imagePath: cart.entries.isNotEmpty
-                  ? cart.entries.first.item.imagePath
-                  : null,
-              colorSeed: cart.entries.isNotEmpty
-                  ? cart.entries.first.item.colorSeed
-                  : 0,
-            );
-
-            orderHistory.addOrder(order);
-            cart.clear();
-
-            Future.delayed(const Duration(seconds: 7), () {
-              orderHistory.updateOrderStatus(orderId, 'Completed');
-            });
-
-            // Confirm with the processing → success modal (order already saved).
-            if (context.mounted) {
-              PaymentSuccessDialog.show(
-                context,
-                amount: order.total,
-                onDismiss: () {},
-              );
-            }
-          } catch (e) {
-            scaffoldMessenger.showSnackBar(
-              SnackBar(
-                content: Text('Payment failed: $e'),
-                behavior: SnackBarBehavior.floating,
-                backgroundColor: const Color(0xFFE53935),
-                duration: const Duration(seconds: 3),
-              ),
-            );
-          }
-        },
-      ),
-    );
-  }
-
-  String _formatDate(DateTime dt) {
-    final now = DateTime.now();
-    if (dt.day == now.day && dt.month == now.month && dt.year == now.year) {
-      return 'Today, ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')} ${dt.hour >= 12 ? 'PM' : 'AM'}';
-    }
-    return '${dt.month}/${dt.day}, ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -194,7 +122,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   _MenuSection(
                     selectedFilter: _selectedFilter,
                     onFilterChanged: (i) => setState(() => _selectedFilter = i),
-                    filteredItems: _filteredItems,
+                    filteredItems: _filteredItems(
+                      switch (context.watch<MenuState>().items) {
+                        AsyncData<List<FoodItem>>(:final data) => data,
+                        _ => const <FoodItem>[],
+                      },
+                    ),
                     filterLabels: _filterLabels,
                     onViewAll: () => AppShellScope.maybeOf(context)?.setTab(1),
                   ),
@@ -204,7 +137,9 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             CartBar(
               onViewCart: () => Navigator.pushNamed(context, '/order-summary'),
-              onCheckout: () => _showCheckoutSheet(context),
+              // Checkout happens on the order-summary screen (pick session,
+              // place the real order, pay, then get the QR coupon).
+              onCheckout: () => Navigator.pushNamed(context, '/order-summary'),
             ),
           ],
         ),
