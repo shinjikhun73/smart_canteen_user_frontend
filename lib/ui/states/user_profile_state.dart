@@ -7,13 +7,28 @@ import 'package:flutter/foundation.dart';
 class UserProfileState extends ChangeNotifier {
   String _name = 'John Doe';
   String _email = 'john.doe@cadt.edu.kh';
-  final String _badge = 'CADT Scholar';
+  String _badge = 'CADT Scholar';
   File? _photo;
 
   String get name => _name;
   String get email => _email;
   String get badge => _badge;
   File? get photo => _photo;
+
+  /// Fills the profile from the signed-in backend user (name, email, school).
+  /// Empty values are ignored so we never blank the header.
+  void setFromUser({
+    required String name,
+    required String email,
+    String? schoolName,
+  }) {
+    if (name.trim().isNotEmpty) _name = name.trim();
+    if (email.trim().isNotEmpty) _email = email.trim();
+    if (schoolName != null && schoolName.trim().isNotEmpty) {
+      _badge = schoolName.trim();
+    }
+    notifyListeners();
+  }
 
   /// Two-letter initials derived from the name, e.g. "John Doe" → "JD".
   String get initials {

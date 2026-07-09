@@ -360,6 +360,16 @@ class _OrderItemImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final url = entry.item.imageUrl;
+    if (url != null && url.isNotEmpty) {
+      return Image.network(
+        url,
+        fit: BoxFit.cover,
+        loadingBuilder: (_, child, progress) =>
+            progress == null ? child : _placeholder(),
+        errorBuilder: (_, _, _) => _placeholder(),
+      );
+    }
     if (entry.item.imagePath != null) {
       return Image.asset(
         entry.item.imagePath!,

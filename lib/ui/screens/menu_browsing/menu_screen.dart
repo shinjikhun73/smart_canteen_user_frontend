@@ -1094,19 +1094,26 @@ class _FoodImageState extends State<_FoodImage> {
     _initializeImage();
   }
 
+  bool get _hasImage =>
+      (widget.item.imageUrl != null && widget.item.imageUrl!.isNotEmpty) ||
+      (widget.item.imagePath != null && widget.item.imagePath!.isNotEmpty);
+
   void _initializeImage() {
-    if (widget.item.imagePath != null && widget.item.imagePath!.isNotEmpty) {
-      try {
-        _imageProvider = AssetImage(widget.item.imagePath!);
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            _precacheImage();
-          }
-        });
-      } catch (e) {
+    final url = widget.item.imageUrl;
+    final asset = widget.item.imagePath;
+    try {
+      if (url != null && url.isNotEmpty) {
+        _imageProvider = NetworkImage(url);
+      } else if (asset != null && asset.isNotEmpty) {
+        _imageProvider = AssetImage(asset);
+      } else {
         setState(() => _imageError = true);
+        return;
       }
-    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _precacheImage();
+      });
+    } catch (e) {
       setState(() => _imageError = true);
     }
   }
@@ -1148,7 +1155,7 @@ class _FoodImageState extends State<_FoodImage> {
   }
 
   Widget _buildImageContent() {
-    if (widget.item.imagePath == null || widget.item.imagePath!.isEmpty || _imageError) {
+    if (!_hasImage || _imageError) {
       return _buildPlaceholder();
     }
 

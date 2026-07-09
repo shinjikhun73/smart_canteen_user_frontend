@@ -3,6 +3,11 @@
 // fallback/reference sample.
 import 'package:flutter/material.dart';
 
+/// Temporary shared food photo shown for every backend item until each dish has
+/// its own `image_url`. Swap this per-item later (see MenuItemDto/MenuState).
+const String kTestFoodImageUrl =
+    'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&q=80';
+
 class FoodItem {
   final String id;
   final String name;
@@ -11,7 +16,8 @@ class FoodItem {
   final double rating;
   final List<String> tags;
   final String category; // 'breakfast' | 'lunch' | 'drinks'
-  final String? imagePath;
+  final String? imagePath; // bundled asset (local)
+  final String? imageUrl; // remote photo (network)
   final int colorSeed;
 
   const FoodItem({
@@ -23,6 +29,7 @@ class FoodItem {
     required this.tags,
     required this.category,
     this.imagePath,
+    this.imageUrl,
     this.colorSeed = 0,
   });
 }

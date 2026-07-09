@@ -55,7 +55,10 @@ class MenuState extends ChangeNotifier {
         rating: 0.0, // backend has no ratings
         tags: dto.categoryName != null ? [dto.categoryName!] : const <String>[],
         category: (dto.categoryName ?? 'other').toLowerCase(),
-        imagePath: null, // no images -> card falls back to gradient + icon
+        imagePath: null,
+        // TEMP: one shared photo for every dish (backend has no per-item image
+        // yet). When MenuItemDto gains a real image_url, use dto.imageUrl here.
+        imageUrl: kTestFoodImageUrl,
         colorSeed: index,
       );
 }

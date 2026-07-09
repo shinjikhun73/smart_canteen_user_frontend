@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../../data/repositories/auth/auth_repository.dart';
+import '../../../model/user/user.dart';
 import '../../../models/cart_model.dart';
 import '../../../models/food_item.dart';
 import '../../../theme/app_theme.dart';
@@ -37,8 +39,28 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         context.read<BalanceState>().fetchBalance();
         context.read<MenuState>().load();
+        _loadProfile();
       }
     });
+  }
+
+  /// Pulls the real signed-in user from the backend so the header greeting
+  /// shows their actual name/school instead of the placeholder default. Runs on
+  /// every landing so it's correct even when onboarding was skipped.
+  Future<void> _loadProfile() async {
+    final authRepo = context.read<AuthRepository>();
+    final profileState = context.read<UserProfileState>();
+    try {
+      final user = User.fromDto(await authRepo.getProfile());
+      if (!mounted) return;
+      profileState.setFromUser(
+        name: user.fullName,
+        email: user.email,
+        schoolName: user.schoolName,
+      );
+    } catch (_) {
+      // Keep whatever the header already shows if the fetch fails.
+    }
   }
 
   static const _filterLabels = ['All', 'Breakfast', 'Lunch', 'Drinks'];
@@ -1699,6 +1721,18 @@ class _FoodThumbnail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final url = item.imageUrl;
+    if (url != null && url.isNotEmpty) {
+      return Image.network(
+        url,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
+        loadingBuilder: (_, child, progress) =>
+            progress == null ? child : _placeholder(),
+        errorBuilder: (_, _, _) => _placeholder(),
+      );
+    }
     if (item.imagePath != null) {
       return Image.asset(
         item.imagePath!,
