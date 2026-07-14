@@ -63,8 +63,12 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  static const _filterLabels = ['All', 'Breakfast', 'Lunch', 'Drinks'];
-  static const _filterCats = ['', 'breakfast', 'lunch', 'drinks'];
+  static const _filterLabels = [
+    'All', 'Breakfast', 'Lunch', 'Dinner', 'Snacks', 'Drinks', 'Desserts',
+  ];
+  static const _filterCats = [
+    '', 'breakfast', 'lunch', 'dinner', 'snacks', 'drinks', 'desserts',
+  ];
 
   List<FoodItem> _filteredItems(List<FoodItem> all) {
     final cat = _filterCats[_selectedFilter];

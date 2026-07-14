@@ -27,8 +27,14 @@ class _MenuScreenState extends State<MenuScreen> {
   _SortBy _sortBy = _SortBy.recommended;
   final ScrollController _scrollController = ScrollController();
 
-  static const _filters = ['All', 'Breakfast', 'Lunch', 'Drinks'];
-  static const _cats = ['', 'breakfast', 'lunch', 'drinks'];
+  // Mirrors the real backend categories so nothing is hidden (Dinner was
+  // missing before). The chip row scrolls horizontally.
+  static const _filters = [
+    'All', 'Breakfast', 'Lunch', 'Dinner', 'Snacks', 'Drinks', 'Desserts',
+  ];
+  static const _cats = [
+    '', 'breakfast', 'lunch', 'dinner', 'snacks', 'drinks', 'desserts',
+  ];
 
   @override
   void initState() {
