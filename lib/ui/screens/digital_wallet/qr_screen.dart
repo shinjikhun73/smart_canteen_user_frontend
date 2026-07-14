@@ -9,6 +9,8 @@ import '../../../data/dtos/order_dto.dart';
 import '../../../theme/app_theme.dart';
 import '../../../ui/states/meal_coupons_state.dart';
 import '../../../ui/states/order_history_state.dart';
+import '../../../ui/states/user_profile_state.dart';
+import '../../../ui/utils/meal_session.dart';
 import '../../widgets/smart_canteen_widgets.dart';
 
 // ── Screen-scoped palette (green theme) ──────────────────────────────────────
@@ -31,7 +33,11 @@ class QrScreen extends StatefulWidget {
 
 class _QrScreenState extends State<QrScreen>
     with TickerProviderStateMixin {
-  String _session = 'breakfast';
+  // Defaults to the session open right now; auto-jumps to whichever session
+  // actually has a coupon once they load (unless the user picks one manually).
+  late String _session =
+      MealSession.activeAt(DateTime.now())?.key ?? 'breakfast';
+  bool _userPickedSession = false;
   int _couponIndex = 0;
 
   late final AnimationController _pulseCtrl;
@@ -74,9 +80,29 @@ class _QrScreenState extends State<QrScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _entranceCtrl.forward();
-        context.read<MealCouponsState>().fetchActive();
+        context
+            .read<MealCouponsState>()
+            .fetchActive()
+            .then((_) => _autoSelectSession());
       }
     });
+  }
+
+  /// After coupons load, if the currently-shown session has none but another
+  /// session does, switch to that one — unless the user already picked a tab.
+  void _autoSelectSession() {
+    if (!mounted || _userPickedSession) return;
+    final coupons = context.read<MealCouponsState>();
+    if (coupons.forSession(_session).isNotEmpty) return;
+    for (final s in MealSession.values) {
+      if (coupons.forSession(s.key).isNotEmpty) {
+        setState(() {
+          _session = s.key;
+          _couponIndex = 0;
+        });
+        return;
+      }
+    }
   }
 
   @override
@@ -162,6 +188,7 @@ class _QrScreenState extends State<QrScreen>
               child: SlideTransition(
                 position: _entranceSlide,
                 child: _TicketCard(
+                  userName: context.watch<UserProfileState>().name,
                   sessionLabel: _sessionLabel(_session),
                   isPaid: isPaid,
                   pulseAnim: _pulseAnim,
@@ -189,6 +216,7 @@ class _QrScreenState extends State<QrScreen>
               onSelect: (s) => setState(() {
                 _session = s;
                 _couponIndex = 0;
+                _userPickedSession = true;
               }),
             ),
             const SizedBox(height: 20),
@@ -365,6 +393,7 @@ class _OutlinedReceiptButtonState extends State<_OutlinedReceiptButton> {
 
 class _TicketCard extends StatelessWidget {
   const _TicketCard({
+    required this.userName,
     required this.sessionLabel,
     required this.isPaid,
     required this.pulseAnim,
@@ -372,6 +401,7 @@ class _TicketCard extends StatelessWidget {
     required this.subtitle,
   });
 
+  final String userName;
   final String sessionLabel;
   final bool isPaid;
   final Animation<double> pulseAnim;
@@ -429,9 +459,11 @@ class _TicketCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'John Doe',
-                        style: TextStyle(
+                      Text(
+                        userName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
@@ -849,7 +881,7 @@ class _SessionSelector extends StatelessWidget {
         _SessionChip(
           icon: Icons.nightlight_outlined,
           label: 'Dinner',
-          time: '5 – 7 PM',
+          time: '3 – 5 PM',
           isSelected: selected == 'dinner',
           onTap: () => onSelect('dinner'),
         ),

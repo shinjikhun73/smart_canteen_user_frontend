@@ -12,6 +12,7 @@ import '../../../ui/states/meal_coupons_state.dart';
 import '../../../ui/states/menu_state.dart';
 import '../../../ui/states/order_history_state.dart';
 import '../../../ui/utils/async_value.dart';
+import '../../../ui/utils/meal_session.dart';
 import '../digital_wallet/qr_screen.dart';
 import '../../widgets/payment_method_sheet.dart';
 import '../../widgets/payment_success_dialog.dart';
@@ -27,8 +28,6 @@ class OrderSummaryScreen extends StatefulWidget {
 }
 
 class _OrderSummaryScreenState extends State<OrderSummaryScreen> {
-  // The meal session this order is for; the backend requires one of these.
-  String _session = _inferSessionKey();
   bool _placing = false;
 
   void _showPaymentMethodSheet(double amount) {
@@ -65,6 +64,13 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen> {
       return;
     }
 
+    // Ordering is only allowed during the current meal session's window.
+    final session = MealSession.activeAt(DateTime.now());
+    if (session == null) {
+      fail('Ordering is closed right now. Try during a meal session.');
+      return;
+    }
+
     final cart = CartProvider.of(context);
     final orderRepo = context.read<OrderRepository>();
     final balance = context.read<BalanceState>();
@@ -92,13 +98,13 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen> {
     try {
       final order = await orderRepo.placeOrder(
         schoolId: schoolId,
-        mealSession: _session,
+        mealSession: session.key,
         items: items,
       );
       // Charge the wallet the backend's authoritative total.
       await balance.payment(order.totalAmount);
       mealCoupons.addFromOrder(order.coupons);
-      _recordLocalHistory(cart, order);
+      _recordLocalHistory(cart, order, session);
       cart.clear();
       if (!mounted) return;
       _showPaymentSuccess(order.totalAmount);
@@ -111,7 +117,8 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen> {
     }
   }
 
-  void _recordLocalHistory(CartModel cart, PlacedOrderDto order) {
+  void _recordLocalHistory(
+      CartModel cart, PlacedOrderDto order, MealSession session) {
     final itemsLabel = cart.entries
         .map(
           (e) => e.quantity > 1 ? '${e.item.name} ×${e.quantity}' : e.item.name,
@@ -125,7 +132,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen> {
             items: itemsLabel,
             total: order.totalAmount,
             status: 'Pending',
-            session: _sessionLabel(_session),
+            session: session.label,
             imagePath: firstEntry?.item.imagePath,
             colorSeed: firstEntry?.item.colorSeed ?? 0,
           ),
@@ -253,8 +260,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen> {
                 ),
                 _PaymentSummarySection(
                   cart: cart,
-                  session: _session,
-                  onSessionChanged: (s) => setState(() => _session = s),
+                  activeSession: MealSession.activeAt(DateTime.now()),
                   isPlacing: _placing,
                   onPay: () => _showPaymentMethodSheet(cart.total),
                 ),
@@ -468,20 +474,22 @@ class QuantityController extends StatelessWidget {
 class _PaymentSummarySection extends StatelessWidget {
   const _PaymentSummarySection({
     required this.cart,
-    required this.session,
-    required this.onSessionChanged,
+    required this.activeSession,
     required this.isPlacing,
     required this.onPay,
   });
 
   final CartModel cart;
-  final String session;
-  final ValueChanged<String> onSessionChanged;
+
+  /// The session currently open for ordering, or null when between windows.
+  final MealSession? activeSession;
   final bool isPlacing;
   final VoidCallback onPay;
 
   @override
   Widget build(BuildContext context) {
+    final isOpen = activeSession != null;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -509,18 +517,33 @@ class _PaymentSummarySection extends StatelessWidget {
           const SizedBox(height: 10),
           Row(
             children: [
-              for (final s in const ['breakfast', 'lunch', 'dinner'])
+              for (final s in MealSession.values)
                 Expanded(
                   child: Padding(
-                    padding: EdgeInsets.only(right: s == 'dinner' ? 0 : 8),
+                    padding: EdgeInsets.only(
+                        right: s == MealSession.dinner ? 0 : 8),
+                    // Only the session whose time window is open can be picked;
+                    // the others are shown disabled.
                     child: _SessionChoiceChip(
-                      label: _sessionLabel(s),
-                      selected: session == s,
-                      onTap: () => onSessionChanged(s),
+                      label: s.label,
+                      selected: s == activeSession,
+                      enabled: s == activeSession,
                     ),
                   ),
                 ),
             ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            isOpen
+                ? '${activeSession!.label} is open now (${activeSession!.timeRange})'
+                : 'Ordering is closed. Breakfast ${MealSession.breakfast.timeRange}, '
+                    'Lunch ${MealSession.lunch.timeRange}, Dinner ${MealSession.dinner.timeRange}.',
+            style: TextStyle(
+              fontSize: 11,
+              color: isOpen ? AppTheme.green : const Color(0xFFE53935),
+              fontWeight: FontWeight.w500,
+            ),
           ),
           const SizedBox(height: 16),
           _SummaryRow(
@@ -538,8 +561,12 @@ class _PaymentSummarySection extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           SmartCanteenButton(
-            label: isPlacing ? 'Placing order…' : 'Proceed to Payment  →',
-            onPressed: isPlacing ? null : onPay,
+            label: isPlacing
+                ? 'Placing order…'
+                : isOpen
+                    ? 'Proceed to Payment  →'
+                    : 'Ordering closed',
+            onPressed: (isPlacing || !isOpen) ? null : onPay,
             height: 56,
             radius: 16,
           ),
@@ -553,34 +580,45 @@ class _SessionChoiceChip extends StatelessWidget {
   const _SessionChoiceChip({
     required this.label,
     required this.selected,
-    required this.onTap,
+    required this.enabled,
   });
 
   final String label;
   final bool selected;
-  final VoidCallback onTap;
+
+  /// Only the active session is enabled; disabled chips are greyed and inert.
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
+    final Color bg = selected ? AppTheme.green : Colors.transparent;
+    final Color borderColor = selected
+        ? AppTheme.green
+        : enabled
+            ? AppTheme.border
+            : AppTheme.border.withValues(alpha: 0.4);
+    final Color textColor = selected
+        ? Colors.white
+        : enabled
+            ? AppTheme.mutedText
+            : AppTheme.mutedText.withValues(alpha: 0.35);
+
+    return Opacity(
+      opacity: enabled || selected ? 1 : 0.6,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: selected ? AppTheme.green : Colors.transparent,
+          color: bg,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: selected ? AppTheme.green : AppTheme.border,
-            width: 1.5,
-          ),
+          border: Border.all(color: borderColor, width: 1.5),
         ),
         child: Text(
           label,
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w700,
-            color: selected ? Colors.white : AppTheme.mutedText,
+            color: textColor,
           ),
         ),
       ),
@@ -633,19 +671,3 @@ String _formatNow() {
   final period = dt.hour >= 12 ? 'PM' : 'AM';
   return 'Today, $h:$m $period';
 }
-
-// Default meal-session key ('breakfast'|'lunch'|'dinner') from the current time.
-String _inferSessionKey() {
-  final hour = DateTime.now().hour;
-  if (hour < 10) return 'breakfast';
-  if (hour < 15) return 'lunch';
-  return 'dinner';
-}
-
-// Display label for a session key.
-String _sessionLabel(String key) => switch (key) {
-      'breakfast' => 'Breakfast',
-      'lunch' => 'Lunch',
-      'dinner' => 'Dinner',
-      _ => key,
-    };

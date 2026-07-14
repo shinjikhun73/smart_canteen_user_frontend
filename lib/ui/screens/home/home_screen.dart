@@ -550,8 +550,11 @@ class _BalanceCardState extends State<_BalanceCard> {
       khrText = CurrencyFormatter.usdToKhr(data);
       usdText = '≈ ${CurrencyFormatter.formatUSD(data)} USD';
     } else if (balanceUsd is AsyncError) {
-      khrText = '--';
-      usdText = 'Error loading balance';
+      // No wallet yet (or the balance failed to load) — show a zero balance
+      // rather than an error; a new user simply has no money yet.
+      balanceData = 0;
+      khrText = CurrencyFormatter.usdToKhr(0);
+      usdText = '≈ ${CurrencyFormatter.formatUSD(0)} USD';
     } else {
       khrText = '···';
       usdText = 'Loading…';

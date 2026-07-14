@@ -519,7 +519,8 @@ class _WalletBalanceBadge extends StatelessWidget {
     final balanceUsd = context.watch<BalanceState>().balanceUsd;
     final balanceText = switch (balanceUsd) {
       AsyncData<double>(:final data) => CurrencyFormatter.usdToKhr(data),
-      AsyncError() => '--',
+      // No wallet yet / failed to load — treat as a zero balance, not an error.
+      AsyncError() => CurrencyFormatter.usdToKhr(0),
       _ => '···',
     };
 
