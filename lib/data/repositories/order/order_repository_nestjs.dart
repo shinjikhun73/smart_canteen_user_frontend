@@ -65,6 +65,24 @@ class OrderRepositoryNestjs implements OrderRepository {
     }
   }
 
+  @override
+  Future<List<OrderSummaryDto>> getMyOrders() async {
+    try {
+      final response = await _dio.get(
+        ApiConfig.ordersMy,
+        queryParameters: {'limit': 100},
+      );
+      final list = response.data['data'] as List<dynamic>;
+      return list
+          .map((e) => OrderSummaryDto.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } on DioException catch (e) {
+      throw _mapError(e);
+    } catch (e) {
+      throw ApiException('Unexpected error loading orders: $e');
+    }
+  }
+
   /// Reads the user id (`sub`) from the stored JWT access token, without a
   /// network round-trip.
   Future<String?> _currentUserId() async {

@@ -12,4 +12,7 @@ abstract class OrderRepository {
 
   /// The signed-in user's currently active (unredeemed) coupons.
   Future<List<CouponDto>> getActiveCoupons();
+
+  /// The signed-in user's past orders (most recent first).
+  Future<List<OrderSummaryDto>> getMyOrders();
 }

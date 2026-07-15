@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../../data/repositories/order/order_repository.dart';
+import '../../../data/repositories/wallet/wallet_repository.dart';
 import '../../../models/food_item.dart';
 import '../../../theme/app_theme.dart';
 import '../../../ui/states/order_history_state.dart';
@@ -39,11 +41,24 @@ class HistoryScreen extends StatefulWidget {
 class _HistoryScreenState extends State<HistoryScreen> {
   _SortBy _sort = _SortBy.newest;
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<OrderHistoryState>().loadFromBackend(
+              context.read<OrderRepository>(),
+              context.read<WalletRepository>(),
+            );
+      }
+    });
+  }
+
   List<OrderRecord> _sorted(List<OrderRecord> orders) {
     final list = [...orders];
     switch (_sort) {
       case _SortBy.newest:
-        break; // already newest-first by insertion order
+        list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       case _SortBy.amountHigh:
         list.sort((a, b) => b.total.compareTo(a.total));
       case _SortBy.amountLow:

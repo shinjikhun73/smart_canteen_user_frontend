@@ -1,5 +1,10 @@
 import 'package:flutter/foundation.dart';
 
+import '../../data/dtos/order_dto.dart';
+import '../../data/dtos/wallet_dto.dart';
+import '../../data/repositories/order/order_repository.dart';
+import '../../data/repositories/wallet/wallet_repository.dart';
+
 class OrderRecord {
   const OrderRecord({
     required this.id,
@@ -7,6 +12,7 @@ class OrderRecord {
     required this.items,
     required this.total,
     required this.status,
+    required this.createdAt,
     this.type = 'order',
     this.session,
     this.imagePath,
@@ -17,6 +23,9 @@ class OrderRecord {
   final String date;
   final String items;
   final double total;
+
+  /// Real timestamp, used to sort the merged orders + top-ups chronologically.
+  final DateTime createdAt;
 
   /// 'Pending', 'Completed', or 'Failed'.
   final String status;
@@ -35,81 +44,115 @@ class OrderRecord {
 }
 
 class OrderHistoryState extends ChangeNotifier {
-  final List<OrderRecord> _orders = [
-    const OrderRecord(
-      id: 'seed-1',
-      date: 'Yesterday, 11:45 AM',
-      items: 'Pork with Rice, Coconut Milk Tea',
-      total: 2.75,
-      status: 'Completed',
-      session: 'Lunch',
-      imagePath: 'asset/foods/pork with rice.png',
-      colorSeed: 1,
-    ),
-    const OrderRecord(
-      id: 'seed-2',
-      date: 'Jun 12, 3:00 PM',
-      items: 'Wallet Top-up',
-      total: 5.00,
-      status: 'Completed',
-      type: 'deposit',
-    ),
-    const OrderRecord(
-      id: 'seed-3',
-      date: 'Jun 10, 7:30 AM',
-      items: 'Khmer Noodle',
-      total: 2.00,
-      status: 'Completed',
-      session: 'Breakfast',
-      imagePath: 'asset/foods/khmer noodle.png',
-      colorSeed: 0,
-    ),
-    const OrderRecord(
-      id: 'seed-4',
-      date: 'Jun 9, 12:00 PM',
-      items: 'Chicken with Rice, Sugarcane Juice',
-      total: 2.75,
-      status: 'Completed',
-      session: 'Lunch',
-      imagePath: 'asset/foods/chicken with rice.png',
-      colorSeed: 2,
-    ),
-    const OrderRecord(
-      id: 'seed-5',
-      date: 'Jun 7, 11:30 AM',
-      items: 'Beef Lok Lak, Coconut Milk Tea',
-      total: 4.00,
-      status: 'Completed',
-      session: 'Lunch',
-      imagePath: 'asset/foods/beef lok lak.png',
-      colorSeed: 3,
-    ),
-  ];
+  final List<OrderRecord> _orders = [];
 
   List<OrderRecord> get orders => List.unmodifiable(_orders);
 
-  /// Inserts a new order at the top of the list.
-  void addOrder(OrderRecord order) {
-    _orders.insert(0, order);
+  bool _loading = false;
+  bool get isLoading => _loading;
+
+  /// Loads the signed-in user's real history — food orders (`GET /orders/my`)
+  /// and wallet top-ups (`GET /wallet/:id/transactions`) — merges them, sorts
+  /// newest-first, and replaces the list. On failure the current list is kept.
+  Future<void> loadFromBackend(
+    OrderRepository orderRepo,
+    WalletRepository walletRepo,
+  ) async {
+    _loading = true;
     notifyListeners();
+    try {
+      final results = await Future.wait([
+        orderRepo.getMyOrders(),
+        _safeTransactions(walletRepo),
+      ]);
+      final orderDtos = results[0] as List<OrderSummaryDto>;
+      final txDtos = results[1] as List<TransactionDto>;
+
+      final records = <OrderRecord>[
+        for (final (i, o) in orderDtos.indexed) _toOrderRecord(o, i),
+        // Only "money in" (top-ups / refunds). Wallet 'payment' rows are the
+        // same as the food orders above, so we skip them to avoid duplicates.
+        for (final t
+            in txDtos.where((t) => t.type == 'topup' || t.type == 'refund'))
+          _toDepositRecord(t),
+      ]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+      _orders
+        ..clear()
+        ..addAll(records);
+    } catch (_) {
+      // Keep whatever is already shown if the fetch fails.
+    } finally {
+      _loading = false;
+      notifyListeners();
+    }
   }
 
-  /// Updates the status of the order with [id], if it exists.
-  void updateOrderStatus(String id, String newStatus) {
-    final idx = _orders.indexWhere((o) => o.id == id);
-    if (idx == -1) return;
-    final old = _orders[idx];
-    _orders[idx] = OrderRecord(
-      id: old.id,
-      date: old.date,
-      items: old.items,
-      total: old.total,
-      status: newStatus,
-      type: old.type,
-      session: old.session,
-      imagePath: old.imagePath,
-      colorSeed: old.colorSeed,
+  /// Wallet transactions throw if the user has no wallet yet — treat as empty.
+  Future<List<TransactionDto>> _safeTransactions(WalletRepository repo) async {
+    try {
+      return await repo.getTransactions();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  OrderRecord _toOrderRecord(OrderSummaryDto o, int index) {
+    final label = o.items
+        .map((i) => i.quantity > 1 ? '${i.name} ×${i.quantity}' : i.name)
+        .join(', ');
+    return OrderRecord(
+      id: o.id,
+      date: _fmtDate(o.createdAt),
+      items: label.isEmpty ? 'Order' : label,
+      total: o.totalAmount,
+      status: _mapStatus(o.status),
+      createdAt: o.createdAt,
+      session: _capitalize(o.mealSession),
+      colorSeed: index,
     );
+  }
+
+  OrderRecord _toDepositRecord(TransactionDto t) {
+    return OrderRecord(
+      id: t.id,
+      date: _fmtDate(t.createdAt),
+      items: t.description.isEmpty ? 'Wallet Top-up' : t.description,
+      total: t.amountUsd,
+      status: 'Completed',
+      createdAt: t.createdAt,
+      type: 'deposit',
+    );
+  }
+
+  static String _mapStatus(String backend) => switch (backend) {
+        'completed' => 'Completed',
+        'cancelled' => 'Failed',
+        _ => 'Pending',
+      };
+
+  static String _capitalize(String s) =>
+      s.isEmpty ? s : '${s[0].toUpperCase()}${s.substring(1)}';
+
+  static String _fmtDate(DateTime dt) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    final d = dt.toLocal();
+    final now = DateTime.now();
+    final h = d.hour % 12 == 0 ? 12 : d.hour % 12;
+    final m = d.minute.toString().padLeft(2, '0');
+    final period = d.hour >= 12 ? 'PM' : 'AM';
+    final sameDay = d.year == now.year && d.month == now.month && d.day == now.day;
+    return sameDay
+        ? 'Today, $h:$m $period'
+        : '${months[d.month - 1]} ${d.day}, $h:$m $period';
+  }
+
+  /// Inserts a new order at the top of the list (optimistic, pre-refresh).
+  void addOrder(OrderRecord order) {
+    _orders.insert(0, order);
     notifyListeners();
   }
 }

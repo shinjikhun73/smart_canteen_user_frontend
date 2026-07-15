@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/repositories/auth/auth_repository.dart';
+import '../../../data/repositories/order/order_repository.dart';
+import '../../../data/repositories/wallet/wallet_repository.dart';
 import '../../../model/user/user.dart';
 import '../../../models/cart_model.dart';
 import '../../../models/food_item.dart';
@@ -39,6 +41,10 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         context.read<BalanceState>().fetchBalance();
         context.read<MenuState>().load();
+        context.read<OrderHistoryState>().loadFromBackend(
+              context.read<OrderRepository>(),
+              context.read<WalletRepository>(),
+            );
         _loadProfile();
       }
     });
@@ -2442,6 +2448,7 @@ Future<void> _doTopUp(
       items: 'Wallet Top-up via $method',
       total: amount,
       status: success ? 'Completed' : 'Failed',
+      createdAt: DateTime.now(),
       type: 'deposit',
     ),
   );

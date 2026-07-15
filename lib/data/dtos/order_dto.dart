@@ -85,3 +85,55 @@ class PlacedOrderDto {
         _ => 0.0,
       };
 }
+
+/// One line of a past order (a menu item + quantity), for history display.
+class OrderLineDto {
+  final String name;
+  final int quantity;
+
+  const OrderLineDto({required this.name, required this.quantity});
+
+  factory OrderLineDto.fromJson(Map<String, dynamic> json) {
+    final menuItem = json['menuItem'] ?? json['menu_item'];
+    return OrderLineDto(
+      name: menuItem is Map<String, dynamic>
+          ? (menuItem['name'] as String? ?? 'Item')
+          : 'Item',
+      quantity: (json['quantity'] as num?)?.toInt() ?? 1,
+    );
+  }
+}
+
+/// A past order from `GET /orders/my`, used by the History screen.
+class OrderSummaryDto {
+  final String id;
+  final double totalAmount;
+  final String status; // pending | preparing | ready | completed | cancelled
+  final String mealSession;
+  final DateTime createdAt;
+  final List<OrderLineDto> items;
+
+  const OrderSummaryDto({
+    required this.id,
+    required this.totalAmount,
+    required this.status,
+    required this.mealSession,
+    required this.createdAt,
+    required this.items,
+  });
+
+  factory OrderSummaryDto.fromJson(Map<String, dynamic> json) {
+    final itemsJson = (json['items'] as List<dynamic>?) ?? const [];
+    return OrderSummaryDto(
+      id: json['id'] as String,
+      totalAmount: PlacedOrderDto._toDouble(json['total_amount']),
+      status: json['status'] as String? ?? 'pending',
+      mealSession: json['meal_session'] as String? ?? '',
+      createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ??
+          DateTime.now(),
+      items: itemsJson
+          .map((e) => OrderLineDto.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+}

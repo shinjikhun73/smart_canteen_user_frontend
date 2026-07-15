@@ -37,4 +37,10 @@ class OrderRepositoryMock implements OrderRepository {
     await Future.delayed(const Duration(milliseconds: 400));
     return _coupons.where((c) => c.isActive).toList();
   }
+
+  @override
+  Future<List<OrderSummaryDto>> getMyOrders() async {
+    await Future.delayed(const Duration(milliseconds: 400));
+    return const [];
+  }
 }

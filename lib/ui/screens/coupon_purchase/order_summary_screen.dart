@@ -132,6 +132,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen> {
             items: itemsLabel,
             total: order.totalAmount,
             status: 'Pending',
+            createdAt: DateTime.now(),
             session: session.label,
             imagePath: firstEntry?.item.imagePath,
             colorSeed: firstEntry?.item.colorSeed ?? 0,
