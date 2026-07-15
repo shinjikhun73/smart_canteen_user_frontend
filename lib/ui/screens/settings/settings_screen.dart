@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
+import '../../../data/repositories/auth/auth_repository.dart';
 import '../../../theme/app_theme.dart';
 import '../../../ui/states/app_settings_state.dart';
 import '../../../ui/states/balance_state.dart';
@@ -65,7 +66,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
     if (confirmed == true && mounted) {
       HapticFeedback.mediumImpact();
-      Navigator.pushNamedAndRemoveUntil(context, '/', (_) => false);
+      // Clear the session first — otherwise the splash screen's auto-login sees
+      // the still-valid token and sends the user right back to Home.
+      final authRepo = context.read<AuthRepository>();
+      final navigator = Navigator.of(context);
+      await authRepo.logout(); // clears stored tokens + Google sign-out
+      navigator.pushNamedAndRemoveUntil('/', (_) => false);
     }
   }
 
