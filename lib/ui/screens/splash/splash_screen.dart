@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../../../data/local/token_storage.dart';
+import '../../../data/repositories/auth/auth_repository.dart';
+import '../../../model/user/user.dart';
 import '../../../theme/app_theme.dart';
+import '../../states/user_profile_state.dart';
 import '../../widgets/smart_canteen_widgets.dart';
 import '../login/sign_in_screen.dart';
+import '../shell/app_shell.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -28,6 +34,10 @@ class _SplashScreenState extends State<SplashScreen>
 
   late final Animation<double> _buttonFade;
   late final Animation<Offset> _buttonSlide;
+
+  // While true, we're checking for a saved session; the "Get Started" button is
+  // hidden until we know the user is logged out.
+  bool _checkingSession = true;
 
   @override
   void initState() {
@@ -98,6 +108,38 @@ class _SplashScreenState extends State<SplashScreen>
         );
 
     _ctrl.forward();
+    _tryAutoLogin();
+  }
+
+  /// Session restore: if a token is stored and still valid (the API client
+  /// refreshes it transparently on a 401), skip sign-in and go straight to the
+  /// app. Otherwise reveal the "Get Started" button.
+  Future<void> _tryAutoLogin() async {
+    final authRepo = context.read<AuthRepository>();
+    final profileState = context.read<UserProfileState>();
+    final navigator = Navigator.of(context);
+
+    final token = await TokenStorage.instance.readAccessToken();
+    if (!mounted) return;
+    if (token == null) {
+      setState(() => _checkingSession = false);
+      return;
+    }
+
+    try {
+      final user = User.fromDto(await authRepo.getProfile());
+      if (!mounted) return;
+      profileState.setFromUser(
+        name: user.fullName,
+        email: user.email,
+        schoolName: user.schoolName,
+      );
+      navigator.pushReplacementNamed(AppShell.routeName);
+    } catch (_) {
+      // Invalid/expired session (or offline) — fall back to sign-in. Token
+      // clearing on an unrecoverable 401 is handled by the API client.
+      if (mounted) setState(() => _checkingSession = false);
+    }
   }
 
   @override
@@ -190,24 +232,39 @@ class _SplashScreenState extends State<SplashScreen>
                       ),
                     ),
                   ),
-                  FadeTransition(
-                    opacity: _buttonFade,
-                    child: SlideTransition(
-                      position: _buttonSlide,
-                      child: SafeArea(
-                        top: false,
-                        child: SizedBox(
-                          width: 180, // fixed smaller width
-                          child: SmartCanteenButton(
-                            label: 'Get Started',
-                            onPressed: _navigateToSignIn,
-                            height: 44, // smaller height
-                            radius:
-                                30, // optional: adjust corner radius for balance
-                            width: 180, // fixed smaller width
-                          ),
-                        ),
-                      ),
+                  SafeArea(
+                    top: false,
+                    child: SizedBox(
+                      height: 44,
+                      child: _checkingSession
+                          // Verifying a saved session — brief spinner instead of
+                          // the button, so a logged-in user never sees it.
+                          ? const Center(
+                              child: SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.4,
+                                  color: AppTheme.green,
+                                ),
+                              ),
+                            )
+                          : FadeTransition(
+                              opacity: _buttonFade,
+                              child: SlideTransition(
+                                position: _buttonSlide,
+                                child: SizedBox(
+                                  width: 180,
+                                  child: SmartCanteenButton(
+                                    label: 'Get Started',
+                                    onPressed: _navigateToSignIn,
+                                    height: 44,
+                                    radius: 30,
+                                    width: 180,
+                                  ),
+                                ),
+                              ),
+                            ),
                     ),
                   ),
                 ],

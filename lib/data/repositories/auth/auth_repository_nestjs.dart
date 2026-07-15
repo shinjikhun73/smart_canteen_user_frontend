@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart'
 import 'package:dio/dio.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+import '../../config/api_client.dart';
 import '../../config/api_config.dart';
 import '../../config/google_auth_config.dart';
 import '../../dtos/auth_dto.dart';
@@ -13,26 +14,7 @@ import 'auth_repository.dart';
 class AuthRepositoryNestjs implements AuthRepository {
   AuthRepositoryNestjs({Dio? dio, TokenStorage? tokenStorage})
       : _tokenStorage = tokenStorage ?? TokenStorage.instance,
-        _dio = dio ??
-            Dio(
-              BaseOptions(
-                baseUrl: ApiConfig.baseUrl,
-                connectTimeout: const Duration(seconds: 15),
-                receiveTimeout: const Duration(seconds: 15),
-              ),
-            ) {
-    _dio.interceptors.add(
-      InterceptorsWrapper(
-        onRequest: (options, handler) async {
-          final token = await _tokenStorage.readAccessToken();
-          if (token != null) {
-            options.headers['Authorization'] = 'Bearer $token';
-          }
-          handler.next(options);
-        },
-      ),
-    );
-  }
+        _dio = dio ?? createApiClient(tokenStorage: tokenStorage);
 
   final Dio _dio;
   final TokenStorage _tokenStorage;

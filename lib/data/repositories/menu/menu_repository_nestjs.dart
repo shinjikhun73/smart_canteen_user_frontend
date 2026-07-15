@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import '../../config/api_client.dart';
 import '../../config/api_config.dart';
 import '../../dtos/menu_dto.dart';
 import '../../exceptions/api_exception.dart';
@@ -8,30 +9,9 @@ import 'menu_repository.dart';
 
 class MenuRepositoryNestjs implements MenuRepository {
   MenuRepositoryNestjs({Dio? dio, TokenStorage? tokenStorage})
-      : _tokenStorage = tokenStorage ?? TokenStorage.instance,
-        _dio = dio ??
-            Dio(
-              BaseOptions(
-                baseUrl: ApiConfig.baseUrl,
-                connectTimeout: const Duration(seconds: 15),
-                receiveTimeout: const Duration(seconds: 15),
-              ),
-            ) {
-    _dio.interceptors.add(
-      InterceptorsWrapper(
-        onRequest: (options, handler) async {
-          final token = await _tokenStorage.readAccessToken();
-          if (token != null) {
-            options.headers['Authorization'] = 'Bearer $token';
-          }
-          handler.next(options);
-        },
-      ),
-    );
-  }
+      : _dio = dio ?? createApiClient(tokenStorage: tokenStorage);
 
   final Dio _dio;
-  final TokenStorage _tokenStorage;
 
   @override
   Future<List<MenuItemDto>> getMenuItems({String? schoolId}) async {

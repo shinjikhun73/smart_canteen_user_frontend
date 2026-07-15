@@ -446,7 +446,7 @@ class _LogoBadge extends StatelessWidget {
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
+          shape: BoxShape.circle,
           border: Border.all(
             color: selected ? AppTheme.green : option.brandColor.withValues(alpha: 0.15),
             width: selected ? 1.6 : 1,
@@ -479,7 +479,7 @@ class _LogoBadge extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-        borderRadius: BorderRadius.circular(14), // ← consistent rounding
+        shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
             color: (selected ? AppTheme.green : option.brandColor)
