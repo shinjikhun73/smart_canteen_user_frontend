@@ -5,6 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
+import '../../../data/exceptions/api_exception.dart';
+import '../../../data/repositories/auth/auth_repository.dart';
+import '../../../model/user/user.dart';
 import '../../../theme/app_theme.dart';
 import '../../../ui/states/user_profile_state.dart';
 import '../../widgets/settings_widgets.dart';
@@ -25,6 +28,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late final TextEditingController _nameController;
   late final TextEditingController _emailController;
   File? _photo;
+  bool _saving = false;
 
   @override
   void initState() {
@@ -112,21 +116,65 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  void _save() {
-    if (!_formKey.currentState!.validate()) return;
+  Future<void> _save() async {
+    if (_saving || !_formKey.currentState!.validate()) return;
+
+    final profileState = context.read<UserProfileState>();
+    final userId = profileState.userId;
+    if (userId == null) {
+      // No backend id yet (profile never loaded) — can't PATCH.
+      _showSnack('Profile not loaded yet. Please try again.', isError: true);
+      return;
+    }
+
+    final authRepo = context.read<AuthRepository>();
+    final navigator = Navigator.of(context);
+
+    // The backend stores name as first/last, so split the single "Full Name"
+    // field the same way onboarding does.
+    final fullName = _nameController.text.trim();
+    final parts = fullName.split(RegExp(r'\s+'));
+    final firstName = parts.isNotEmpty ? parts.first : null;
+    final lastName = parts.length > 1 ? parts.sublist(1).join(' ') : null;
+
     HapticFeedback.mediumImpact();
-    final user = context.read<UserProfileState>();
-    user.updateProfile(
-      name: _nameController.text,
-      email: _emailController.text,
-    );
-    user.setPhoto(_photo);
-    Navigator.pop(context);
+    setState(() => _saving = true);
+
+    try {
+      final dto = await authRepo.updateProfile(
+        userId: userId,
+        firstName: firstName,
+        lastName: lastName,
+      );
+      if (!mounted) return;
+      // Reflect the saved name (and photo, which stays device-local since the
+      // backend has no image upload) so the header updates immediately.
+      final saved = User.fromDto(dto);
+      profileState.setFromUser(
+        id: saved.id,
+        name: saved.fullName,
+        email: saved.email,
+        schoolName: saved.schoolName,
+      );
+      profileState.setPhoto(_photo);
+      navigator.pop();
+      _showSnack('Profile updated');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      _showSnack(
+        e is ApiException ? e.message : 'Could not update profile. Please try again.',
+        isError: true,
+      );
+    }
+  }
+
+  void _showSnack(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Profile updated'),
+      SnackBar(
+        content: Text(message),
         behavior: SnackBarBehavior.floating,
-        backgroundColor: AppTheme.green,
+        backgroundColor: isError ? const Color(0xFFE53935) : AppTheme.green,
       ),
     );
   }
@@ -174,29 +222,33 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       icon: Icons.mail_outline_rounded,
                       hint: 'Enter your email',
                       keyboardType: TextInputType.emailAddress,
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) {
-                          return 'Email cannot be empty';
-                        }
-                        final ok = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
-                            .hasMatch(v.trim());
-                        return ok ? null : 'Enter a valid email';
-                      },
+                      readOnly: true,
+                      helper: 'Email is linked to your account and can’t be changed here.',
                     ),
                   ),
                   const SizedBox(height: 36),
                   SettingsFadeIn(
                     index: 3,
                     child: SmartCanteenButton(
-                      label: 'Save Changes',
+                      label: _saving ? 'Saving…' : 'Save Changes',
                       gradient: const LinearGradient(
                         colors: [Color(0xFF1B5E20), Color(0xFF43A047)],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
-                      leading: const Icon(Icons.check_rounded,
-                          color: Colors.white, size: 20),
-                      onPressed: _save,
+                      leading: _saving
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : const Icon(Icons.check_rounded,
+                              color: Colors.white, size: 20),
+                      onPressed: _saving ? null : _save,
                     ),
                   ),
                 ],
@@ -279,6 +331,8 @@ class _LabeledField extends StatelessWidget {
     required this.hint,
     this.keyboardType,
     this.validator,
+    this.readOnly = false,
+    this.helper,
   });
 
   final String label;
@@ -287,6 +341,8 @@ class _LabeledField extends StatelessWidget {
   final String hint;
   final TextInputType? keyboardType;
   final String? Function(String?)? validator;
+  final bool readOnly;
+  final String? helper;
 
   @override
   Widget build(BuildContext context) {
@@ -307,16 +363,30 @@ class _LabeledField extends StatelessWidget {
           controller: controller,
           keyboardType: keyboardType,
           validator: validator,
+          readOnly: readOnly,
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w500,
-            color: context.textColor,
+            color: readOnly ? context.mutedColor : context.textColor,
           ),
           decoration: InputDecoration(
             hintText: hint,
             prefixIcon: Icon(icon, color: context.mutedColor, size: 20),
+            filled: readOnly,
+            fillColor: readOnly ? context.surfaceColor : null,
           ),
         ),
+        if (helper != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            helper!,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: context.mutedColor,
+            ),
+          ),
+        ],
       ],
     );
   }

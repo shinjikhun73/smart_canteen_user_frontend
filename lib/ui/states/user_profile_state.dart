@@ -5,23 +5,29 @@ import 'package:flutter/foundation.dart';
 /// Holds the signed-in user's editable profile so the header, stats,
 /// and Edit Profile form all stay in sync.
 class UserProfileState extends ChangeNotifier {
+  String? _userId;
   String _name = 'John Doe';
   String _email = 'john.doe@cadt.edu.kh';
   String _badge = 'CADT Scholar';
   File? _photo;
 
+  /// Backend id of the signed-in user, needed to `PATCH /users/:id/profile`.
+  /// Null until the profile is loaded from the backend.
+  String? get userId => _userId;
   String get name => _name;
   String get email => _email;
   String get badge => _badge;
   File? get photo => _photo;
 
-  /// Fills the profile from the signed-in backend user (name, email, school).
+  /// Fills the profile from the signed-in backend user (id, name, email, school).
   /// Empty values are ignored so we never blank the header.
   void setFromUser({
+    required String id,
     required String name,
     required String email,
     String? schoolName,
   }) {
+    if (id.trim().isNotEmpty) _userId = id.trim();
     if (name.trim().isNotEmpty) _name = name.trim();
     if (email.trim().isNotEmpty) _email = email.trim();
     if (schoolName != null && schoolName.trim().isNotEmpty) {

@@ -60,6 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final user = User.fromDto(await authRepo.getProfile());
       if (!mounted) return;
       profileState.setFromUser(
+        id: user.id,
         name: user.fullName,
         email: user.email,
         schoolName: user.schoolName,
