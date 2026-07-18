@@ -21,6 +21,15 @@ abstract class AuthRepository {
     String? schoolId,
   });
 
+  /// Updates the signed-in user's notification preferences and returns the
+  /// fresh set. Only non-null flags are sent, so callers can patch a subset.
+  Future<NotificationPreferencesDto> updateNotificationPreferences({
+    required String userId,
+    bool? orderUpdates,
+    bool? promotions,
+    bool? systemAlerts,
+  });
+
   /// Lists the schools a user can pick from during onboarding.
   Future<List<SchoolDto>> getSchools();
 

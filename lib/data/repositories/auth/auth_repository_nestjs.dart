@@ -151,6 +151,33 @@ class AuthRepositoryNestjs implements AuthRepository {
   }
 
   @override
+  Future<NotificationPreferencesDto> updateNotificationPreferences({
+    required String userId,
+    bool? orderUpdates,
+    bool? promotions,
+    bool? systemAlerts,
+  }) async {
+    try {
+      final response = await _dio.patch(
+        ApiConfig.userNotificationPreferences(userId),
+        data: {
+          'notify_order_updates': ?orderUpdates,
+          'notify_promotions': ?promotions,
+          'notify_system_alerts': ?systemAlerts,
+        },
+      );
+      // The endpoint returns the full user record; read the prefs off it.
+      return NotificationPreferencesDto.fromUserJson(
+        response.data['data'] as Map<String, dynamic>,
+      );
+    } on DioException catch (e) {
+      throw _mapError(e);
+    } catch (e) {
+      throw ApiException('Unexpected error updating notification preferences: $e');
+    }
+  }
+
+  @override
   Future<List<SchoolDto>> getSchools() async {
     try {
       final response = await _dio.get(ApiConfig.schools);

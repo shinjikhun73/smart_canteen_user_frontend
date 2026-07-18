@@ -10,6 +10,20 @@ class NotificationSettingsScreen extends StatelessWidget {
 
   static const routeName = '/notification-settings';
 
+  /// Awaits a toggle's save and shows an error if it was rolled back.
+  Future<void> _persist(BuildContext context, Future<bool> save) async {
+    final ok = await save;
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Couldn't save your preference. Please try again."),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Color(0xFFE53935),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final prefs = context.watch<NotificationPrefsState>();
@@ -36,21 +50,24 @@ class NotificationSettingsScreen extends StatelessWidget {
                         title: 'Order Updates',
                         subtitle: 'Status of your orders & top-ups',
                         value: prefs.orderUpdates,
-                        onChanged: prefs.setOrderUpdates,
+                        onChanged: (v) =>
+                            _persist(context, prefs.setOrderUpdates(v)),
                       ),
                       _ToggleTile(
                         icon: Icons.local_offer_rounded,
                         title: 'Promotions',
                         subtitle: 'Deals, discounts & coupons',
                         value: prefs.promotions,
-                        onChanged: prefs.setPromotions,
+                        onChanged: (v) =>
+                            _persist(context, prefs.setPromotions(v)),
                       ),
                       _ToggleTile(
                         icon: Icons.campaign_rounded,
                         title: 'System Alerts',
                         subtitle: 'Important account & app notices',
                         value: prefs.systemAlerts,
-                        onChanged: prefs.setSystemAlerts,
+                        onChanged: (v) =>
+                            _persist(context, prefs.setSystemAlerts(v)),
                         isLast: true,
                       ),
                     ],

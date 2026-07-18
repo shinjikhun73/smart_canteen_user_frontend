@@ -83,7 +83,8 @@ class _SmartCanteenAppState extends State<SmartCanteenApp> {
         ChangeNotifierProvider(create: (_) => AppSettingsState()),
         ChangeNotifierProvider(create: (_) => UserProfileState()),
         ChangeNotifierProvider(create: (_) => PaymentMethodsState()),
-        ChangeNotifierProvider(create: (_) => NotificationPrefsState()),
+        ChangeNotifierProvider(
+            create: (_) => NotificationPrefsState(widget.authRepository)),
         ChangeNotifierProvider(create: (_) => OrderHistoryState()),
         ChangeNotifierProvider(
             create: (_) => BalanceState(widget.walletRepository)),

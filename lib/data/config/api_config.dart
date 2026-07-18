@@ -45,6 +45,12 @@ class ApiConfig {
   /// (first/last name, phone, avatar, school). See backend `UsersController.updateProfile`.
   static String userProfile(String id) => '/users/$id/profile';
 
+  /// `PATCH /users/:id/notification-preferences` — update the signed-in user's
+  /// push-notification preferences. See backend
+  /// `UsersController.updateNotificationPreferences`.
+  static String userNotificationPreferences(String id) =>
+      '/users/$id/notification-preferences';
+
   /// `GET /schools` — list of selectable schools for onboarding.
   static const String schools = '/schools';
 

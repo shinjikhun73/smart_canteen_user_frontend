@@ -10,11 +10,11 @@ import 'main_common.dart';
 void main() {
   runApp(
     SmartCanteenApp(
-      authRepository:   AuthRepositoryNestjs(),
-      menuRepository:   MenuRepositoryNestjs(),
+      authRepository: AuthRepositoryNestjs(),
+      menuRepository: MenuRepositoryNestjs(),
       couponRepository: CouponRepositoryNestjs(),
       walletRepository: WalletRepositoryNestjs(),
-      orderRepository:  OrderRepositoryNestjs(),
+      orderRepository: OrderRepositoryNestjs(),
     ),
   );
 }

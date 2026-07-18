@@ -14,6 +14,7 @@ import '../../../theme/app_theme.dart';
 import '../../../ui/states/balance_state.dart';
 import '../../../ui/states/menu_state.dart';
 import '../../../ui/states/order_history_state.dart';
+import '../../../ui/states/notification_prefs_state.dart';
 import '../../../ui/states/user_profile_state.dart';
 import '../../../ui/utils/async_value.dart';
 import '../../../ui/utils/currency_formatter.dart';
@@ -56,6 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadProfile() async {
     final authRepo = context.read<AuthRepository>();
     final profileState = context.read<UserProfileState>();
+    final notificationPrefs = context.read<NotificationPrefsState>();
     try {
       final user = User.fromDto(await authRepo.getProfile());
       if (!mounted) return;
@@ -64,6 +66,12 @@ class _HomeScreenState extends State<HomeScreen> {
         name: user.fullName,
         email: user.email,
         schoolName: user.schoolName,
+      );
+      notificationPrefs.setFromUser(
+        userId: user.id,
+        orderUpdates: user.notifyOrderUpdates,
+        promotions: user.notifyPromotions,
+        systemAlerts: user.notifySystemAlerts,
       );
     } catch (_) {
       // Keep whatever the header already shows if the fetch fails.

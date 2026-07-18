@@ -5,6 +5,7 @@ import '../../../data/local/token_storage.dart';
 import '../../../data/repositories/auth/auth_repository.dart';
 import '../../../model/user/user.dart';
 import '../../../theme/app_theme.dart';
+import '../../states/notification_prefs_state.dart';
 import '../../states/user_profile_state.dart';
 import '../../widgets/smart_canteen_widgets.dart';
 import '../login/sign_in_screen.dart';
@@ -117,6 +118,7 @@ class _SplashScreenState extends State<SplashScreen>
   Future<void> _tryAutoLogin() async {
     final authRepo = context.read<AuthRepository>();
     final profileState = context.read<UserProfileState>();
+    final notificationPrefs = context.read<NotificationPrefsState>();
     final navigator = Navigator.of(context);
 
     final token = await TokenStorage.instance.readAccessToken();
@@ -134,6 +136,12 @@ class _SplashScreenState extends State<SplashScreen>
         name: user.fullName,
         email: user.email,
         schoolName: user.schoolName,
+      );
+      notificationPrefs.setFromUser(
+        userId: user.id,
+        orderUpdates: user.notifyOrderUpdates,
+        promotions: user.notifyPromotions,
+        systemAlerts: user.notifySystemAlerts,
       );
       navigator.pushReplacementNamed(AppShell.routeName);
     } catch (_) {

@@ -46,17 +46,25 @@ class AuthRepositoryMock implements AuthRepository {
     );
   }
 
+  // In-memory prefs so mock toggles persist for the life of the app session.
+  NotificationPreferencesDto _prefs = const NotificationPreferencesDto(
+    orderUpdates: true,
+    promotions: false,
+    systemAlerts: true,
+  );
+
   @override
   Future<UserProfileDto> getProfile() async {
     await Future.delayed(const Duration(milliseconds: 500));
-    return const UserProfileDto(
+    return UserProfileDto(
       id: 'mock-user-001',
       email: 'john.doe@cadt.edu.kh',
       firstName: 'John',
       lastName: 'Doe',
       status: 'active',
-      role: RoleDto(id: 'mock-role-student', name: 'student'),
-      school: SchoolDto(id: 'mock-school-cadt', name: 'CADT'),
+      role: const RoleDto(id: 'mock-role-student', name: 'student'),
+      school: const SchoolDto(id: 'mock-school-cadt', name: 'CADT'),
+      notificationPreferences: _prefs,
     );
   }
 
@@ -88,7 +96,24 @@ class AuthRepositoryMock implements AuthRepository {
       status: 'active',
       role: const RoleDto(id: 'mock-role-student', name: 'student'),
       school: school,
+      notificationPreferences: _prefs,
     );
+  }
+
+  @override
+  Future<NotificationPreferencesDto> updateNotificationPreferences({
+    required String userId,
+    bool? orderUpdates,
+    bool? promotions,
+    bool? systemAlerts,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 400));
+    _prefs = NotificationPreferencesDto(
+      orderUpdates: orderUpdates ?? _prefs.orderUpdates,
+      promotions: promotions ?? _prefs.promotions,
+      systemAlerts: systemAlerts ?? _prefs.systemAlerts,
+    );
+    return _prefs;
   }
 
   @override

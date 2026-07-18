@@ -10,6 +10,9 @@ class User {
   final String? schoolId;
   final String? schoolName;
   final UserRole role;
+  final bool notifyOrderUpdates;
+  final bool notifyPromotions;
+  final bool notifySystemAlerts;
 
   const User({
     required this.id,
@@ -21,6 +24,9 @@ class User {
     this.schoolId,
     this.schoolName,
     required this.role,
+    this.notifyOrderUpdates = true,
+    this.notifyPromotions = false,
+    this.notifySystemAlerts = true,
   });
 
   /// True when we have no name on file — e.g. a Google account that didn't
@@ -65,6 +71,9 @@ class User {
         schoolId: dto.school?.id,
         schoolName: dto.school?.name,
         role: UserRole.fromString(dto.role?.name),
+        notifyOrderUpdates: dto.notificationPreferences.orderUpdates,
+        notifyPromotions: dto.notificationPreferences.promotions,
+        notifySystemAlerts: dto.notificationPreferences.systemAlerts,
       );
 }
 

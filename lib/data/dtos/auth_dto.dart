@@ -46,6 +46,29 @@ class SchoolDto {
       );
 }
 
+/// The signed-in user's push-notification preferences. Persisted on the backend
+/// `User` (`notify_*` columns) and edited from Settings → Notifications.
+class NotificationPreferencesDto {
+  final bool orderUpdates;
+  final bool promotions;
+  final bool systemAlerts;
+
+  const NotificationPreferencesDto({
+    required this.orderUpdates,
+    required this.promotions,
+    required this.systemAlerts,
+  });
+
+  /// Reads the flat `notify_*` fields off a backend `User` JSON, defaulting to
+  /// the same values as the backend column defaults if any are absent.
+  factory NotificationPreferencesDto.fromUserJson(Map<String, dynamic> json) =>
+      NotificationPreferencesDto(
+        orderUpdates: json['notify_order_updates'] as bool? ?? true,
+        promotions: json['notify_promotions'] as bool? ?? false,
+        systemAlerts: json['notify_system_alerts'] as bool? ?? true,
+      );
+}
+
 /// Mirrors the backend `User` entity (backend `src/modules/users/entities/user.entity.ts`),
 /// as returned by `GET /users/me` and embedded in the `user` field of auth responses.
 class UserProfileDto {
@@ -58,6 +81,7 @@ class UserProfileDto {
   final String status;
   final RoleDto? role;
   final SchoolDto? school;
+  final NotificationPreferencesDto notificationPreferences;
 
   const UserProfileDto({
     required this.id,
@@ -69,6 +93,7 @@ class UserProfileDto {
     required this.status,
     this.role,
     this.school,
+    required this.notificationPreferences,
   });
 
   factory UserProfileDto.fromJson(Map<String, dynamic> json) => UserProfileDto(
@@ -85,5 +110,7 @@ class UserProfileDto {
         school: json['school'] != null
             ? SchoolDto.fromJson(json['school'] as Map<String, dynamic>)
             : null,
+        notificationPreferences:
+            NotificationPreferencesDto.fromUserJson(json),
       );
 }
