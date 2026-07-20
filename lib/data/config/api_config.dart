@@ -83,8 +83,23 @@ class ApiConfig {
   static String walletTransactions(String walletId) =>
       '/wallet/$walletId/transactions';
 
-  // Notifications — backed by the announcements broadcast feed.
+  // Alerts feed — a merge of admin announcements (broadcast) and the user's own
+  // event notifications (order status, wallet top-ups/payments, low balance).
+
   /// `GET /announcements?status=&page=&limit=` — published announcements shown
   /// in the app's Alerts screen. See backend `AnnouncementsController.findAll`.
   static const String announcements = '/announcements';
+
+  /// `GET /notifications?is_read=&page=&limit=` — the signed-in user's own
+  /// notifications. See backend `NotificationsController`.
+  static const String notifications = '/notifications';
+
+  /// `GET /notifications/unread-count` — unread count for the bell badge.
+  static const String notificationsUnreadCount = '/notifications/unread-count';
+
+  /// `PATCH /notifications/read-all` — mark all the user's notifications read.
+  static const String notificationsReadAll = '/notifications/read-all';
+
+  /// `DELETE /notifications/:id` — dismiss a single notification.
+  static String notificationById(String id) => '/notifications/$id';
 }

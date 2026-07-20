@@ -15,6 +15,7 @@ import '../../../ui/states/balance_state.dart';
 import '../../../ui/states/menu_state.dart';
 import '../../../ui/states/order_history_state.dart';
 import '../../../ui/states/notification_prefs_state.dart';
+import '../alerts/view_model/notification_view_model.dart';
 import '../../../ui/states/user_profile_state.dart';
 import '../../../ui/utils/async_value.dart';
 import '../../../ui/utils/currency_formatter.dart';
@@ -47,6 +48,7 @@ class _HomeScreenState extends State<HomeScreen> {
               context.read<WalletRepository>(),
             );
         _loadProfile();
+        context.read<NotificationViewModel>().refreshUnreadCount();
       }
     });
   }
@@ -373,9 +375,44 @@ class _HeaderState extends State<_Header> with SingleTickerProviderStateMixin {
                 ),
               ),
             ),
-            _ActionIcon(
-              icon: Icons.notifications_outlined,
-              onTap: widget.onNotifTap,
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                _ActionIcon(
+                  icon: Icons.notifications_outlined,
+                  onTap: widget.onNotifTap,
+                ),
+                if (context.watch<NotificationViewModel>().unreadBadge > 0)
+                  Positioned(
+                    right: -2,
+                    top: -2,
+                    child: Container(
+                      width: 18,
+                      height: 18,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE53935),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFE53935)
+                                .withValues(alpha: 0.4),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        '${context.watch<NotificationViewModel>().unreadBadge}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(width: 8),
             Stack(

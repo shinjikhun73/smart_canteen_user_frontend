@@ -88,7 +88,7 @@ class AlertTile extends StatelessWidget {
         child: const Icon(Icons.delete_outline_rounded, color: Color(0xFFE53935)),
       ),
       onDismissed: (_) =>
-          context.read<NotificationViewModel>().dismiss(item.id),
+          context.read<NotificationViewModel>().dismiss(item),
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
@@ -134,7 +134,6 @@ class AlertTile extends StatelessWidget {
 
   Color _iconBg(String type) {
     return switch (type) {
-      'balance' => const Color(0xFFE8F5E9),
       'promo' => const Color(0xFFFFF8E1),
       _ => const Color(0xFFE8F5E9),
     };
@@ -142,9 +141,11 @@ class AlertTile extends StatelessWidget {
 
   IconData _icon(String type) {
     return switch (type) {
-      'balance' => Icons.account_balance_wallet_outlined,
+      'wallet' || 'balance' => Icons.account_balance_wallet_outlined,
+      'order' => Icons.receipt_long_rounded,
       'promo' => Icons.local_offer_outlined,
       'coupon' => Icons.qr_code_2,
+      'announcement' => Icons.campaign_rounded,
       _ => Icons.notifications_outlined,
     };
   }
