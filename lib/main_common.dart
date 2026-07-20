@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'data/repositories/auth/auth_repository.dart';
 import 'data/repositories/coupon/coupon_repository.dart';
 import 'data/repositories/menu/menu_repository.dart';
+import 'data/repositories/notification/notification_repository.dart';
 import 'data/repositories/order/order_repository.dart';
 import 'data/repositories/wallet/wallet_repository.dart';
 import 'models/cart_model.dart';
@@ -44,6 +45,7 @@ class SmartCanteenApp extends StatefulWidget {
     required this.couponRepository,
     required this.walletRepository,
     required this.orderRepository,
+    required this.notificationRepository,
   });
 
   final AuthRepository authRepository;
@@ -51,6 +53,7 @@ class SmartCanteenApp extends StatefulWidget {
   final CouponRepository couponRepository;
   final WalletRepository walletRepository;
   final OrderRepository orderRepository;
+  final NotificationRepository notificationRepository;
 
   @override
   State<SmartCanteenApp> createState() => _SmartCanteenAppState();
@@ -75,6 +78,8 @@ class _SmartCanteenAppState extends State<SmartCanteenApp> {
         Provider<CouponRepository>.value(value: widget.couponRepository),
         Provider<WalletRepository>.value(value: widget.walletRepository),
         Provider<OrderRepository>.value(value: widget.orderRepository),
+        Provider<NotificationRepository>.value(
+            value: widget.notificationRepository),
 
         // Global states
         ChangeNotifierProvider.value(value: _cart),
@@ -102,7 +107,9 @@ class _SmartCanteenAppState extends State<SmartCanteenApp> {
           create: (_) =>
               WalletViewModel(widget.walletRepository, widget.couponRepository),
         ),
-        ChangeNotifierProvider(create: (_) => NotificationViewModel()),
+        ChangeNotifierProvider(
+            create: (_) =>
+                NotificationViewModel(widget.notificationRepository)),
       ],
       child: CartProvider(
         cart: _cart,

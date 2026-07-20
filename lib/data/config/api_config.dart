@@ -83,7 +83,8 @@ class ApiConfig {
   static String walletTransactions(String walletId) =>
       '/wallet/$walletId/transactions';
 
-  // Notifications
-  static const String notifications = '/notifications';
-  static const String markRead = '/notifications/read';
+  // Notifications — backed by the announcements broadcast feed.
+  /// `GET /announcements?status=&page=&limit=` — published announcements shown
+  /// in the app's Alerts screen. See backend `AnnouncementsController.findAll`.
+  static const String announcements = '/announcements';
 }
