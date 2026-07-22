@@ -14,6 +14,10 @@ class User {
   final bool notifyPromotions;
   final bool notifySystemAlerts;
 
+  /// False for Google-only accounts (no password set). The app offers
+  /// "Set a password" so they can also sign in with email + password.
+  final bool canUseEmailPassword;
+
   const User({
     required this.id,
     required this.email,
@@ -27,6 +31,7 @@ class User {
     this.notifyOrderUpdates = true,
     this.notifyPromotions = false,
     this.notifySystemAlerts = true,
+    this.canUseEmailPassword = true,
   });
 
   /// True when we have no name on file — e.g. a Google account that didn't
@@ -74,6 +79,7 @@ class User {
         notifyOrderUpdates: dto.notificationPreferences.orderUpdates,
         notifyPromotions: dto.notificationPreferences.promotions,
         notifySystemAlerts: dto.notificationPreferences.systemAlerts,
+        canUseEmailPassword: dto.canUseEmailPassword,
       );
 }
 

@@ -83,6 +83,10 @@ class UserProfileDto {
   final SchoolDto? school;
   final NotificationPreferencesDto notificationPreferences;
 
+  /// True when the account has a password set, so email/password sign-in works.
+  /// False for Google-only accounts — the app offers "Set a password" then.
+  final bool canUseEmailPassword;
+
   const UserProfileDto({
     required this.id,
     required this.email,
@@ -94,6 +98,7 @@ class UserProfileDto {
     this.role,
     this.school,
     required this.notificationPreferences,
+    this.canUseEmailPassword = true,
   });
 
   factory UserProfileDto.fromJson(Map<String, dynamic> json) => UserProfileDto(
@@ -112,5 +117,8 @@ class UserProfileDto {
             : null,
         notificationPreferences:
             NotificationPreferencesDto.fromUserJson(json),
+        // Backend sends this on auth responses (serializeUser). Absent on the
+        // raw /users/me entity, where we assume a password exists.
+        canUseEmailPassword: json['can_use_email_password'] as bool? ?? true,
       );
 }

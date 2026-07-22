@@ -68,6 +68,7 @@ class _HomeScreenState extends State<HomeScreen> {
         name: user.fullName,
         email: user.email,
         schoolName: user.schoolName,
+        canUseEmailPassword: user.canUseEmailPassword,
       );
       notificationPrefs.setFromUser(
         userId: user.id,

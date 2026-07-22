@@ -136,6 +136,7 @@ class _SplashScreenState extends State<SplashScreen>
         name: user.fullName,
         email: user.email,
         schoolName: user.schoolName,
+        canUseEmailPassword: user.canUseEmailPassword,
       );
       notificationPrefs.setFromUser(
         userId: user.id,

@@ -41,6 +41,15 @@ class ApiConfig {
   static const String googleLogin = '/auth/google';
   static const String profile = '/users/me';
 
+  /// `POST /auth/complete-profile` — onboarding: saves name/phone/school and
+  /// optionally sets an initial password. Marks the account profile_completed
+  /// and returns a fresh token pair.
+  static const String completeProfile = '/auth/complete-profile';
+
+  /// `POST /auth/set-password` — adds a password to an account that has none
+  /// (e.g. created via Google), enabling email/password login alongside it.
+  static const String setPassword = '/auth/set-password';
+
   /// `PATCH /users/:id/profile` — update the signed-in user's own profile
   /// (first/last name, phone, avatar, school). See backend `UsersController.updateProfile`.
   static String userProfile(String id) => '/users/$id/profile';

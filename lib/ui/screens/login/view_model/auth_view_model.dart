@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../../data/exceptions/api_exception.dart';
 import '../../../../data/repositories/auth/auth_repository.dart';
 import '../../../../model/user/user.dart';
 import '../../../utils/async_value.dart';
@@ -70,27 +71,24 @@ class AuthViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Saves the onboarding details (name, phone, school) by splitting [fullName]
-  /// into first/last and patching the backend, then refreshes [loginState].
+  /// Saves the onboarding details (name, phone, school) via
+  /// `POST /auth/complete-profile`, which also marks the account
+  /// `profile_completed` and returns a fresh token pair. An optional
+  /// [password] additionally enables email/password sign-in — useful for
+  /// accounts created with Google, which have no password.
   /// Returns true on success.
   Future<bool> completeProfile({
-    required String userId,
     required String fullName,
     required String phone,
     required String schoolId,
+    String? password,
   }) async {
-    final parts = fullName.trim().split(RegExp(r'\s+'));
-    final firstName = parts.isNotEmpty ? parts.first : null;
-    final lastName =
-        parts.length > 1 ? parts.sublist(1).join(' ') : null;
-
     try {
-      final dto = await _authRepository.updateProfile(
-        userId: userId,
-        firstName: firstName,
-        lastName: lastName,
+      final dto = await _authRepository.completeProfile(
+        fullName: fullName.trim(),
         phone: phone.trim(),
         schoolId: schoolId,
+        password: password,
       );
       _loginState = AsyncData(User.fromDto(dto));
       notifyListeners();
@@ -99,6 +97,19 @@ class AuthViewModel extends ChangeNotifier {
       _loginState = AsyncError(e, s);
       notifyListeners();
       return false;
+    }
+  }
+
+  /// Adds a password to a Google-only account so email/password sign-in works
+  /// too. Returns null on success, or an error message to show.
+  Future<String?> setPassword(String password) async {
+    try {
+      await _authRepository.setPassword(password);
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    } catch (_) {
+      return 'Could not set your password. Please try again.';
     }
   }
 

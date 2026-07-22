@@ -7,6 +7,7 @@ import '../../../data/repositories/auth/auth_repository.dart';
 import '../../../model/user/user.dart';
 import '../../../theme/app_theme.dart';
 import '../../../ui/utils/async_value.dart';
+import '../../../ui/utils/password_validator.dart';
 import '../../states/user_profile_state.dart';
 import '../../widgets/smart_canteen_button.dart';
 import '../../widgets/smart_canteen_text_field.dart';
@@ -43,6 +44,13 @@ class CompleteProfileScreen extends StatefulWidget {
 class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
   late final TextEditingController _nameController;
   late final TextEditingController _phoneController;
+  late final TextEditingController _passwordController;
+  late final TextEditingController _confirmController;
+  bool _obscurePassword = true;
+
+  /// Google accounts arrive with no password. Offering to set one here (it's
+  /// optional) lets them also sign in with email + password on another device.
+  bool get _canSetPassword => !widget.user.canUseEmailPassword;
 
   List<SchoolDto> _schools = const [];
   String? _selectedSchoolId;
@@ -60,6 +68,8 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
         .join(' ');
     _nameController = TextEditingController(text: existingName);
     _phoneController = TextEditingController(text: widget.user.phone ?? '');
+    _passwordController = TextEditingController();
+    _confirmController = TextEditingController();
     _selectedSchoolId = widget.user.schoolId;
     _loadSchools();
   }
@@ -68,6 +78,8 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
+    _passwordController.dispose();
+    _confirmController.dispose();
     super.dispose();
   }
 
@@ -114,6 +126,20 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       return;
     }
 
+    // Password is optional here — only validate it if they typed something.
+    final password = _passwordController.text;
+    if (_canSetPassword && password.isNotEmpty) {
+      final passwordError = validateNewPassword(password);
+      if (passwordError != null) {
+        setState(() => _error = passwordError);
+        return;
+      }
+      if (password != _confirmController.text) {
+        setState(() => _error = 'The two passwords do not match.');
+        return;
+      }
+    }
+
     setState(() {
       _isSubmitting = true;
       _error = null;
@@ -121,10 +147,10 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
 
     final authViewModel = context.read<AuthViewModel>();
     final ok = await authViewModel.completeProfile(
-      userId: widget.user.id,
       fullName: name,
       phone: phone,
       schoolId: schoolId,
+      password: _canSetPassword && password.isNotEmpty ? password : null,
     );
     if (!mounted) return;
 
@@ -266,6 +292,48 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                           size: 20,
                         ),
                       ),
+                      if (_canSetPassword) ...[
+                        const SizedBox(height: 26),
+                        const _OptionalPasswordHeader(),
+                        const SizedBox(height: 14),
+                        SmartCanteenTextField(
+                          controller: _passwordController,
+                          label: 'Password (optional)',
+                          hintText: 'At least 8 characters',
+                          obscureText: _obscurePassword,
+                          prefixIcon: const Icon(
+                            Icons.lock_outline_rounded,
+                            color: AppTheme.green,
+                            size: 20,
+                          ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility_off_outlined
+                                  : Icons.visibility_outlined,
+                              size: 20,
+                              color: AppTheme.mutedText,
+                            ),
+                            onPressed: () => setState(
+                                () => _obscurePassword = !_obscurePassword),
+                            tooltip: _obscurePassword
+                                ? 'Show password'
+                                : 'Hide password',
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        SmartCanteenTextField(
+                          controller: _confirmController,
+                          label: 'Confirm Password',
+                          hintText: 'Re-enter your password',
+                          obscureText: _obscurePassword,
+                          prefixIcon: const Icon(
+                            Icons.lock_outline_rounded,
+                            color: AppTheme.green,
+                            size: 20,
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 24),
                       SmartCanteenButton(
                         label: _isSubmitting ? 'Saving…' : 'Continue',
@@ -303,6 +371,7 @@ class _SchoolField extends StatelessWidget {
   final String? error;
   final ValueChanged<String?> onChanged;
   final VoidCallback onRetry;
+
 
   @override
   Widget build(BuildContext context) {
@@ -454,6 +523,58 @@ class _ErrorBanner extends StatelessWidget {
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Explains why an optional password is offered during onboarding: the account
+/// was created with Google and has no password, so setting one here is what
+/// makes email + password sign-in possible on another device later.
+class _OptionalPasswordHeader extends StatelessWidget {
+  const _OptionalPasswordHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.green.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.green.withValues(alpha: 0.18)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.key_outlined, color: AppTheme.green, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Add a password?',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.text,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  'You signed up with Google. Set a password to also sign in '
+                  'with your email on another device. You can skip this and '
+                  'add one later in Settings.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1.4,
+                    color: AppTheme.mutedText,
+                  ),
+                ),
+              ],
             ),
           ),
         ],

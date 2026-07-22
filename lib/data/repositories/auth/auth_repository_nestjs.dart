@@ -151,6 +151,49 @@ class AuthRepositoryNestjs implements AuthRepository {
   }
 
   @override
+  Future<UserProfileDto> completeProfile({
+    required String fullName,
+    required String phone,
+    required String schoolId,
+    String? password,
+  }) async {
+    try {
+      final response = await _dio.post(
+        ApiConfig.completeProfile,
+        data: {
+          'name': fullName,
+          'phone': phone,
+          'school_id': schoolId,
+          'password': ?password,
+        },
+      );
+      final data = response.data['data'] as Map<String, dynamic>;
+      // The endpoint returns a fresh token pair (the JWT now embeds the
+      // school), so replace the stored session before returning the user.
+      await _tokenStorage.saveTokens(
+        accessToken: data['access_token'] as String,
+        refreshToken: data['refresh_token'] as String,
+      );
+      return UserProfileDto.fromJson(data['user'] as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _mapError(e);
+    } catch (e) {
+      throw ApiException('Unexpected error completing profile: $e');
+    }
+  }
+
+  @override
+  Future<void> setPassword(String password) async {
+    try {
+      await _dio.post(ApiConfig.setPassword, data: {'password': password});
+    } on DioException catch (e) {
+      throw _mapError(e);
+    } catch (e) {
+      throw ApiException('Unexpected error setting password: $e');
+    }
+  }
+
+  @override
   Future<NotificationPreferencesDto> updateNotificationPreferences({
     required String userId,
     bool? orderUpdates,

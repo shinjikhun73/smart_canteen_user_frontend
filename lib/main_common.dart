@@ -26,6 +26,7 @@ import 'ui/screens/settings/about_screen.dart';
 import 'ui/screens/settings/edit_profile_screen.dart';
 import 'ui/screens/settings/notification_settings_screen.dart';
 import 'ui/screens/settings/payment_methods_screen.dart';
+import 'ui/screens/settings/set_password_screen.dart';
 import 'ui/screens/splash/splash_screen.dart';
 import 'ui/states/active_coupon_state.dart';
 import 'ui/states/app_settings_state.dart';
@@ -138,6 +139,7 @@ class _SmartCanteenAppState extends State<SmartCanteenApp> {
                   const PaymentMethodsScreen(),
               NotificationSettingsScreen.routeName: (_) =>
                   const NotificationSettingsScreen(),
+              SetPasswordScreen.routeName: (_) => const SetPasswordScreen(),
               AboutScreen.routeName: (_) => const AboutScreen(),
             },
           ),

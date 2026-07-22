@@ -65,6 +65,9 @@ class AuthRepositoryMock implements AuthRepository {
       role: const RoleDto(id: 'mock-role-student', name: 'student'),
       school: const SchoolDto(id: 'mock-school-cadt', name: 'CADT'),
       notificationPreferences: _prefs,
+      // Mock starts as a Google-only account so the "Set a password" flow is
+      // reachable in the dev flavour.
+      canUseEmailPassword: _hasPassword,
     );
   }
 
@@ -97,6 +100,7 @@ class AuthRepositoryMock implements AuthRepository {
       role: const RoleDto(id: 'mock-role-student', name: 'student'),
       school: school,
       notificationPreferences: _prefs,
+      canUseEmailPassword: _hasPassword,
     );
   }
 
@@ -114,6 +118,43 @@ class AuthRepositoryMock implements AuthRepository {
       systemAlerts: systemAlerts ?? _prefs.systemAlerts,
     );
     return _prefs;
+  }
+
+  // Flips to true once a password is set, mirroring the backend flag.
+  bool _hasPassword = false;
+
+  @override
+  Future<UserProfileDto> completeProfile({
+    required String fullName,
+    required String phone,
+    required String schoolId,
+    String? password,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (password != null && password.isNotEmpty) _hasPassword = true;
+    final parts = fullName.trim().split(RegExp(r'\s+'));
+    final school = _mockSchools.firstWhere(
+      (s) => s.id == schoolId,
+      orElse: () => _mockSchools.first,
+    );
+    return UserProfileDto(
+      id: 'mock-user-001',
+      email: 'john.doe@cadt.edu.kh',
+      firstName: parts.isNotEmpty ? parts.first : null,
+      lastName: parts.length > 1 ? parts.sublist(1).join(' ') : null,
+      phone: phone,
+      status: 'active',
+      role: const RoleDto(id: 'mock-role-student', name: 'student'),
+      school: school,
+      notificationPreferences: _prefs,
+      canUseEmailPassword: _hasPassword,
+    );
+  }
+
+  @override
+  Future<void> setPassword(String password) async {
+    await Future.delayed(const Duration(milliseconds: 400));
+    _hasPassword = true;
   }
 
   @override

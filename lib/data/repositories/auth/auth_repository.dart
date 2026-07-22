@@ -30,6 +30,21 @@ abstract class AuthRepository {
     bool? systemAlerts,
   });
 
+  /// Onboarding: saves the signed-in user's name, phone and school, and
+  /// optionally sets an initial password (which also enables email/password
+  /// sign-in for accounts created via Google). Marks the account
+  /// `profile_completed` and stores the fresh token pair the backend returns.
+  Future<UserProfileDto> completeProfile({
+    required String fullName,
+    required String phone,
+    required String schoolId,
+    String? password,
+  });
+
+  /// Adds a password to an account that has none (e.g. created via Google),
+  /// enabling email/password sign-in alongside it.
+  Future<void> setPassword(String password);
+
   /// Lists the schools a user can pick from during onboarding.
   Future<List<SchoolDto>> getSchools();
 

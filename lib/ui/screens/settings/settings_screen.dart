@@ -20,6 +20,7 @@ import '../shell/app_shell.dart';
 import 'about_screen.dart';
 import 'edit_profile_screen.dart';
 import 'notification_settings_screen.dart';
+import 'set_password_screen.dart';
 import 'payment_methods_screen.dart';
 
 const Color _kRed = Color(0xFFE53935);
@@ -232,6 +233,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   subtitle: 'View past orders',
                   onTap: () => AppShellScope.maybeOf(context)?.setTab(3),
                 ),
+                // Only for accounts created with Google — they have no password
+                // yet, so email/password sign-in is unavailable until they set
+                // one. Disappears once a password exists.
+                if (!context.watch<UserProfileState>().canUseEmailPassword)
+                  SettingsTile(
+                    icon: Icons.key_outlined,
+                    title: 'Set a Password',
+                    subtitle: 'Also sign in with your email',
+                    onTap: () => _open(const SetPasswordScreen()),
+                  ),
                 SettingsTile(
                   icon: Icons.notifications_outlined,
                   title: 'Notifications',
